@@ -1,0 +1,21 @@
+{
+  "name": "vibe",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "check": "biome check --write .",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "check-types": "turbo check-types"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@biomejs/biome": "2.2.2",
+    "turbo": "^2.5.6",
+    "ultracite": "5.2.16"
+  },
+  "packageManager": "pnpm@10.15.0"
+}
