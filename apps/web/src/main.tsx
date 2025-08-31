@@ -18,6 +18,7 @@ const router = createRouter({
 });
 
 declare module '@tanstack/react-router' {
+  // biome-ignore lint/nursery/useConsistentTypeDefinitions: <idk what is happening here if i do type it can't override the original one>
   interface Register {
     router: typeof router;
   }
