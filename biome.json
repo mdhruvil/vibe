@@ -18,8 +18,16 @@
       "!**/.wrangler",
       "!**/.alchemy",
       "!**/wrangler.jsonc",
-      "!**/.source"
+      "!**/.source",
+      "!**/worker-configuration.d.ts"
     ]
+  },
+  "linter": {
+    "rules": {
+      "suspicious": {
+        "noConsole": "off"
+      }
+    }
   },
   "extends": ["ultracite"]
 }
