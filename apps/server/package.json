@@ -13,7 +13,7 @@
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "db:studio:local": "drizzle-kit studio",
     "db:studio:remote": "NODE_ENV=production drizzle-kit studio",
-    "dev": "wrangler dev --port=3000",
+    "dev": "wrangler dev",
     "start": "wrangler dev",
     "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
