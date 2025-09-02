@@ -1,5 +1,7 @@
 import { env } from 'cloudflare:workers';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { trpcServer } from '@hono/trpc-server';
+import { convertToModelMessages, streamText } from 'ai';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -21,6 +23,20 @@ app.use(
 );
 
 app.on(['POST', 'GET'], '/api/auth/**', (c) => auth.handler(c.req.raw));
+
+app.post('/api/chat', async (c) => {
+  const body = await c.req.json();
+  const uiMessages = body.messages || [];
+  const google = createGoogleGenerativeAI({
+    apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
+  });
+  const result = streamText({
+    model: google('gemini-2.5-flash'),
+    messages: convertToModelMessages(uiMessages),
+  });
+
+  return result.toUIMessageStreamResponse();
+});
 
 app.use(
   '/trpc/*',
