@@ -1,9 +1,15 @@
 import { WebContainer, type WebContainerProcess } from '@webcontainer/api';
+import stripAnsi from 'strip-ansi';
 import { create } from 'zustand';
 
 type VMStore = {
   vm: WebContainer | null;
   vmStatus: 'idle' | 'booting' | 'installing' | 'running' | 'stopped' | 'error';
+  logs: Array<{
+    level: 'log';
+    message: string;
+    timestamp: Date;
+  }>;
   initVM: () => Promise<void>;
   shutdownVM: () => void;
   runCommand: (
@@ -11,10 +17,12 @@ type VMStore = {
     args?: string[]
   ) => Promise<WebContainerProcess>;
 };
-
+module;
 export const useVMStore = create<VMStore>()((set, get) => ({
   vm: null,
+  terminal: null,
   vmStatus: 'idle',
+  logs: [],
   initVM: async () => {
     const state = get();
     if (state.vm) {
@@ -48,6 +56,25 @@ export const useVMStore = create<VMStore>()((set, get) => ({
     }
 
     const process = await state.vm.spawn(command, args ?? []);
+    process.output.pipeTo(
+      new WritableStream({
+        write(chunk) {
+          if (!stripAnsi(chunk).trim()) {
+            return;
+          }
+          console.log(stripAnsi(chunk));
+          set({
+            logs: get().logs.concat([
+              {
+                level: 'log',
+                message: stripAnsi(chunk),
+                timestamp: new Date(),
+              },
+            ]),
+          });
+        },
+      })
+    );
     return process;
   },
 }));
