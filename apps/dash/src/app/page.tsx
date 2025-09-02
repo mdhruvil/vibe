@@ -28,7 +28,9 @@ import {
 import { useVMStore } from "@/stores/vm";
 import "@xterm/xterm/css/xterm.css";
 import { DefaultChatTransport } from "ai";
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { fsTree } from "./fs";
 
@@ -74,15 +76,19 @@ export default function Page() {
   }, [vm, initVM, runCommand]);
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="flex justify-between items-center border-b p-2 shrink-0">
-        <div className="text-lg font-bold">My App</div>
+    <div className="flex h-screen flex-col">
+      <div className="flex shrink-0 items-center justify-between border-b p-2">
+        <div>
+          <Link href="/">
+            <Logo className="size-6" />
+          </Link>
+        </div>
         <div>
           <Button size="sm">Publish</Button>
         </div>
       </div>
 
-      <div className="flex flex-1 min-h-0">
+      <div className="flex min-h-0 flex-1">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel minSize={30}>
             <Conversation className="relative h-full overflow-hidden">
@@ -107,28 +113,28 @@ export default function Page() {
                 ))}
               </ConversationContent>
               <ConversationScrollButton />
-              <div className="p-2 absolute bottom-0 left-0 right-0">
+              <div className="absolute right-0 bottom-0 left-0 p-2">
                 <PromptInput
+                  className="relative mx-auto mt-4 w-full max-w-2xl"
                   onSubmit={handleSubmit}
-                  className="mt-4 w-full max-w-2xl mx-auto relative"
                 >
                   <PromptInputTextarea
-                    value={input}
-                    placeholder="Say something..."
-                    onChange={(e) => setInput(e.currentTarget.value)}
                     className="pr-12"
+                    onChange={(e) => setInput(e.currentTarget.value)}
+                    placeholder="Say something..."
+                    value={input}
                   />
                   <PromptInputSubmit
-                    status={status === "streaming" ? "streaming" : "ready"}
+                    className="absolute right-1 bottom-1"
                     disabled={!input.trim()}
-                    className="absolute bottom-1 right-1"
+                    status={status === "streaming" ? "streaming" : "ready"}
                   />
                 </PromptInput>
               </div>
             </Conversation>
           </ResizablePanel>
           <ResizableHandle withHandle />
-          <ResizablePanel minSize={30} className="p-2">
+          <ResizablePanel className="p-2" minSize={30}>
             <WebPreview>
               <WebPreviewNavigation>
                 <WebPreviewUrl
