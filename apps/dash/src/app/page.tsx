@@ -6,6 +6,7 @@ import {
   ConversationContent,
   ConversationScrollButton,
 } from "@/components/conversation";
+import { Logo } from "@/components/logo";
 import { Message, MessageContent } from "@/components/message";
 import {
   PromptInput,
@@ -13,6 +14,7 @@ import {
   PromptInputTextarea,
 } from "@/components/prompt-input";
 import { Response } from "@/components/response";
+import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -27,11 +29,20 @@ import {
 } from "@/components/web-preview";
 import { useVMStore } from "@/stores/vm";
 import "@xterm/xterm/css/xterm.css";
-import { DefaultChatTransport } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from "ai";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/tool";
+import type { CustomUIMessage } from "../../../server/src/index";
 import { fsTree } from "./fs";
 
 export default function Page() {
@@ -39,13 +50,37 @@ export default function Page() {
   const runCommand = useVMStore((state) => state.runCommand);
   const initVM = useVMStore((state) => state.initVM);
   const logs = useVMStore((state) => state.logs);
+  const runWithLogs = useVMStore((state) => state.runWithLogs);
   const [url, setUrl] = useState("");
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-      api: "http://localhost:8787/api/chat",
-    }),
-  });
+  const { messages, sendMessage, status, addToolResult } =
+    useChat<CustomUIMessage>({
+      transport: new DefaultChatTransport({
+        api: "http://localhost:8787/api/chat",
+      }),
+      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+      onToolCall: async ({ toolCall }) => {
+        if (toolCall.dynamic) {
+          return;
+        }
+        console.log({ toolCall });
+        if (toolCall.toolName === "bash") {
+          const command = toolCall.input.command;
+          const parts = command.split(" ");
+          await new Promise((resolve) => setTimeout(resolve, 3000)); // simulate some delay
+          const ilogs = await runWithLogs(parts[0], parts.slice(1));
+          console.log({ ilogs });
+          addToolResult({
+            tool: toolCall.toolName,
+            toolCallId: toolCall.toolCallId,
+            output: ilogs.join("\n"),
+          });
+        }
+      },
+      onFinish: ({ messages: msgs }) => {
+        console.log({ msgs });
+      },
+    });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,6 +138,30 @@ export default function Page() {
                               <Response key={`${message.id}-${i}`}>
                                 {part.text}
                               </Response>
+                            );
+                          case "tool-bash":
+                            return (
+                              <Tool
+                                defaultOpen={false}
+                                key={`${message.id}-${i}`}
+                              >
+                                <ToolHeader
+                                  state={part.state}
+                                  text={`Running \`${part.input?.command}\``}
+                                  type={part.type}
+                                />
+                                <ToolContent>
+                                  <ToolInput input={part.input} />
+                                  <ToolOutput
+                                    errorText={part.errorText}
+                                    output={
+                                      <Response>
+                                        {part.output ?? "No Output"}
+                                      </Response>
+                                    }
+                                  />
+                                </ToolContent>
+                              </Tool>
                             );
                           default:
                             return null;

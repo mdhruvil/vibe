@@ -16,6 +16,7 @@ type VMStore = {
     command: string,
     args?: string[]
   ) => Promise<WebContainerProcess>;
+  runWithLogs: (command: string, args?: string[]) => Promise<string[]>;
 };
 module;
 export const useVMStore = create<VMStore>()((set, get) => ({
@@ -62,7 +63,7 @@ export const useVMStore = create<VMStore>()((set, get) => ({
           if (!stripAnsi(chunk).trim()) {
             return;
           }
-          console.log(stripAnsi(chunk));
+          // console.log(stripAnsi(chunk));
           set({
             logs: get().logs.concat([
               {
@@ -76,5 +77,26 @@ export const useVMStore = create<VMStore>()((set, get) => ({
       })
     );
     return process;
+  },
+  runWithLogs: async (command, args) => {
+    const state = get();
+    if (!state.vm) {
+      throw new Error("VM is not initialized");
+    }
+
+    const process = await state.vm.spawn(command, args ?? []);
+    const logs: string[] = [];
+    process.output.pipeTo(
+      new WritableStream({
+        write(chunk) {
+          if (!stripAnsi(chunk).trim()) {
+            return;
+          }
+          logs.push(stripAnsi(chunk));
+        },
+      })
+    );
+    await process.exit;
+    return logs;
   },
 }));
