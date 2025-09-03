@@ -2,10 +2,12 @@ import { env } from "cloudflare:workers";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { db } from "../db";
+import * as authSchema from "../db/schema/auth";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "sqlite",
+    schema: authSchema,
   }),
   trustedOrigins: [env.CORS_ORIGIN],
   emailAndPassword: {
@@ -13,8 +15,8 @@ export const auth = betterAuth({
   },
   socialProviders: {
     google: {
-      clientId: "clientId",
-      clientSecret: "clientSecret",
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
     github: {
       clientId: "clientId",

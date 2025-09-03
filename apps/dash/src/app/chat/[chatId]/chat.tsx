@@ -14,6 +14,13 @@ import {
   PromptInputTextarea,
 } from "@/components/prompt-input";
 import { Response } from "@/components/response";
+import {
+  Tool,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/tool";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -35,17 +42,16 @@ import {
 } from "ai";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "@/components/tool";
-import type { CustomUIMessage } from "../../../../server/src/index";
-import { fsTree } from "../fs";
+import type { CustomUIMessage } from "../../../../../server/src/index";
+import { fsTree } from "../../fs";
 
-export default function Page() {
+export function Chat({
+  initialMessages,
+  chatId,
+}: {
+  initialMessages: CustomUIMessage[];
+  chatId: string;
+}) {
   const vm = useVMStore((state) => state.vm);
   const runCommand = useVMStore((state) => state.runCommand);
   const initVM = useVMStore((state) => state.initVM);
@@ -55,8 +61,12 @@ export default function Page() {
   const [input, setInput] = useState("");
   const { messages, sendMessage, status, addToolResult } =
     useChat<CustomUIMessage>({
+      messages: initialMessages,
       transport: new DefaultChatTransport({
-        api: "http://localhost:8787/api/chat",
+        api: `http://localhost:8787/api/chat/${chatId}`,
+        prepareSendMessagesRequest({ messages: imessages, id }) {
+          return { body: { message: imessages.at(-1), id } };
+        },
       }),
       sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
       onToolCall: async ({ toolCall }) => {
@@ -184,7 +194,7 @@ export default function Page() {
                     value={input}
                   />
                   <PromptInputSubmit
-                    className="absolute right-1 bottom-1"
+                    className="!absolute right-1 bottom-1"
                     disabled={!input.trim()}
                     status={status === "streaming" ? "streaming" : "ready"}
                   />

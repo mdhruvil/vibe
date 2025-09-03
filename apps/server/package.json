@@ -19,6 +19,11 @@
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
     "wrangler": "wrangler"
   },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts"
+    }
+  },
   "dependencies": {
     "dotenv": "^17.2.1",
     "zod": "^4.0.2",

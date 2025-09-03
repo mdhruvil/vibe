@@ -1,4 +1,5 @@
 {
+	"$schema": "https://unpkg.com/wrangler@latest/config-schema.json",
 	"name": "vibe-server",
 	"main": "src/index.ts",
 	"compatibility_date": "2025-06-15",
@@ -6,7 +7,7 @@
 		"nodejs_compat"
 	],
 	"vars": {
-		"NODE_ENV": "production"
+		"NODE_ENV": "development"
 		// Add public environment variables here
 		// Example: "CORS_ORIGIN": "https://your-domain.com"
 	},
@@ -28,5 +29,22 @@
 			"database_id": "41a2315f-c0a1-42f3-9d53-d9532ac65d89",
 			"migrations_dir": "./src/db/migrations"
 		}
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "CHAT_MANAGER",
+				"class_name": "ChatManager"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": [
+				"ChatManager"
+			]
+		}
 	]
+	
 }

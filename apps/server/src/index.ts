@@ -1,21 +1,12 @@
 import { env } from "cloudflare:workers";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { trpcServer } from "@hono/trpc-server";
-import {
-  convertToModelMessages,
-  type InferUITools,
-  streamText,
-  tool,
-  type UIDataTypes,
-  type UIMessage,
-} from "ai";
+import { type InferUITools, tool, type UIDataTypes, type UIMessage } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import z from "zod";
 import { auth } from "./lib/auth";
 import { createContext } from "./lib/context";
-import { SYSTEM_PROMPT } from "./lib/prompt";
 import { appRouter } from "./routers/index";
 
 const app = new Hono();
@@ -25,13 +16,14 @@ app.use(
   "/*",
   cors({
     origin: env.CORS_ORIGIN || "",
-    allowMethods: ["GET", "POST", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
 
 app.on(["POST", "GET"], "/api/auth/**", (c) => auth.handler(c.req.raw));
+app.get("/api/auth-redirect", (c) => {
+  return c.redirect(env.CORS_ORIGIN);
+});
 
 const tools = {
   bash: tool({
@@ -46,20 +38,10 @@ const tools = {
 export type CustomUITools = InferUITools<typeof tools>;
 export type CustomUIMessage = UIMessage<never, UIDataTypes, CustomUITools>;
 
-app.post("/api/chat", async (c) => {
-  const body = await c.req.json();
-  const uiMessages = body.messages || [];
-  const google = createGoogleGenerativeAI({
-    apiKey: env.GOOGLE_GENERATIVE_AI_API_KEY,
-  });
-  const result = streamText({
-    model: google("gemini-2.5-flash"),
-    system: SYSTEM_PROMPT,
-    messages: convertToModelMessages(uiMessages),
-    tools,
-  });
-
-  return result.toUIMessageStreamResponse();
+app.post("/api/chat/:chatId", (c) => {
+  const chatId = c.req.param("chatId");
+  const chatManager = env.CHAT_MANAGER.getByName(chatId);
+  return chatManager.fetch(c.req.raw);
 });
 
 app.use(
@@ -75,5 +57,9 @@ app.use(
 app.get("/", (c) => {
   return c.text("OK");
 });
+
+// biome-ignore lint/performance/noBarrelFile: <we need it>
+export { ChatManager } from "./chat-manager";
+export type { AppRouter } from "./routers";
 
 export default app;

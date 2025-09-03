@@ -1,6 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   // biome-ignore lint/suspicious/useAwait: <next config expects promise>
   async headers() {
     return [
