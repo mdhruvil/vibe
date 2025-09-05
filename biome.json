@@ -36,6 +36,9 @@
       },
       "nursery": {
         "noShadow": "off"
+      },
+      "complexity": {
+        "useSimplifiedLogicExpression": "off"
       }
     }
   },

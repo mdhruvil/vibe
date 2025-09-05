@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import z from "zod";
 import { db } from "@/db";
 import { chat } from "@/db/schema/chat";
+import { generateTitle } from "@/lib/ai";
 import type { CustomUIMessage } from "..";
 import { protectedProcedure, publicProcedure, router } from "../lib/trpc";
 
@@ -10,22 +11,25 @@ export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
     return "OK";
   }),
-  privateData: protectedProcedure.query(({ ctx }) => {
-    return {
-      message: "This is private",
-      user: ctx.session.user,
-    };
-  }),
-  createChat: protectedProcedure.mutation(async ({ ctx }) => {
-    const [newChat] = await db
-      .insert(chat)
-      .values({
-        title: "Untitled Chat",
-        created_by: ctx.session.user.id,
+
+  createChat: protectedProcedure
+    .input(
+      z.object({
+        prompt: z.string().min(2),
       })
-      .returning();
-    return newChat;
-  }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const title = await generateTitle(input.prompt);
+      const [newChat] = await db
+        .insert(chat)
+        .values({
+          title,
+          created_by: ctx.session.user.id,
+        })
+        .returning();
+      return newChat;
+    }),
+
   getChatWithMessages: protectedProcedure
     .input(z.object({ chatId: z.string() }))
     .query(async ({ ctx, input }) => {
@@ -40,10 +44,12 @@ export const appRouter = router({
         });
       }
       const stub = env.CHAT_MANAGER.getByName(chatRecord.id);
+      // @ts-expect-error <Type instantiation is excessively deep and possibly infinite.>
       const messages = (await stub.getMessages()) as CustomUIMessage[];
       return { ...chatRecord, messages };
     }),
-  getAllChats: protectedProcedure.query(async ({ ctx }) => {
+
+  getAllChatsForCurrentUser: protectedProcedure.query(async ({ ctx }) => {
     const chats = await db.query.chat.findMany({
       where: ({ created_by }, { eq }) => eq(created_by, ctx.session.user.id),
     });

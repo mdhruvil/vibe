@@ -33,6 +33,7 @@ export const useVMStore = create<VMStore>()((set, get) => ({
     set({ vmStatus: "booting" });
     console.log("[VM] Booting the vm...");
     try {
+      get().vm?.teardown();
       const vmInstance = await WebContainer.boot();
       set({ vm: vmInstance, vmStatus: "running" });
       console.log("[VM] VM is running");

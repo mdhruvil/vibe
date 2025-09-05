@@ -1,26 +1,11 @@
 import {
   defaultShouldDehydrateQuery,
   isServer,
-  QueryCache,
   QueryClient,
 } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 function makeQueryClient() {
   const queryClient = new QueryClient({
-    queryCache: new QueryCache({
-      onError(error) {
-        console.error("Query failed:", error);
-        toast.error(error.message, {
-          action: {
-            label: "Retry",
-            onClick: () => {
-              queryClient.invalidateQueries();
-            },
-          },
-        });
-      },
-    }),
     defaultOptions: {
       queries: {
         staleTime: 60 * 1000,

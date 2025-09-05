@@ -34,6 +34,7 @@ import {
   WebPreviewNavigation,
   WebPreviewUrl,
 } from "@/components/web-preview";
+import { PROMPT_STORAGE_KEY } from "@/lib/consts";
 import { useVMStore } from "@/stores/vm";
 import "@xterm/xterm/css/xterm.css";
 import {
@@ -101,6 +102,24 @@ export function Chat({
   };
 
   useEffect(() => {
+    const prompt = localStorage.getItem(PROMPT_STORAGE_KEY);
+    if (!prompt && !initialMessages.length && !messages.length) {
+      console.log("THE PROMPT IS EMPTY!! THIS SHOULD NOT HAPPEN");
+      return;
+    }
+
+    if (prompt && initialMessages.length > 0 && messages.length > 0) {
+      console.log("Already has the messages so no need to set the prompt");
+      return;
+    }
+
+    if (prompt && !initialMessages.length && !messages.length) {
+      localStorage.removeItem(PROMPT_STORAGE_KEY);
+      sendMessage({ text: prompt });
+    }
+  }, [initialMessages.length, messages.length, sendMessage]);
+
+  useEffect(() => {
     (async () => {
       if (!vm) {
         console.log("No VM instance available");
@@ -165,9 +184,7 @@ export function Chat({
                                   <ToolOutput
                                     errorText={part.errorText}
                                     output={
-                                      <Response>
-                                        {part.output ?? "No Output"}
-                                      </Response>
+                                      <pre>{part.output ?? "No Output"}</pre>
                                     }
                                   />
                                 </ToolContent>

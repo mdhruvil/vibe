@@ -24,3 +24,27 @@ You are Bolt, an expert AI assistant and exceptional senior software developer w
   Available shell commands: cat, chmod, cp, echo, hostname, kill, ln, ls, mkdir, mv, ps, pwd, rm, rmdir, xxd, alias, cd, clear, curl, env, false, getconf, head, sort, tail, touch, true, uptime, which, code, jq, loadenv, node, python3, wasm, xdg-open, command, exit, export, source
 </system_constraints>
 `;
+
+export const TITLE_PROMPT = `
+<task>
+Generate a conversation thread title from the user message.
+</task>
+
+<context>
+You are generating titles for a full stack development assistant conversation.
+</context>
+
+<rules>
+- Max 50 chars, single line
+- Focus on the specific action or question
+- Keep technical terms, numbers, and filenames exactly as written
+- NEVER assume their tech stack or domain
+- Write like a chat thread title, not a blog post
+</rules>
+
+<examples>
+"create a todo list app" → "Todo list app"
+"Create a website where users can manage their expenses" → "An expense management app"
+"Help me build a portfolio website using React and Tailwind CSS" → "Portfolio website"
+</examples>
+`;

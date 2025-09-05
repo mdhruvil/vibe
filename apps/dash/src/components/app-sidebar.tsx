@@ -1,63 +1,67 @@
 "use client";
 
-import {
-  Calendar,
-  Home,
-  Inbox,
-  LogInIcon,
-  PlusIcon,
-  Search,
-  Settings,
-} from "lucide-react";
+import { LogInIcon } from "lucide-react";
 import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
 } from "@/components/ui/sidebar";
 import { useSession } from "@/lib/auth-client";
+import { AppSidebarContent } from "./app-sidebar-content";
 import { Logo } from "./logo";
 import { NavUser } from "./sidebar-user";
 import { buttonVariants } from "./ui/button";
 
-// Menu items.
-const items = [
-  {
-    title: "Home",
-    url: "#",
-    icon: Home,
-  },
-  {
-    title: "Inbox",
-    url: "#",
-    icon: Inbox,
-  },
-  {
-    title: "Calendar",
-    url: "#",
-    icon: Calendar,
-  },
-  {
-    title: "Search",
-    url: "#",
-    icon: Search,
-  },
-  {
-    title: "Settings",
-    url: "#",
-    icon: Settings,
-  },
-];
-
 export function AppSidebar() {
-  const { data } = useSession();
+  const { data, isPending } = useSession();
+
+  function renderFooterContent() {
+    if (isPending) {
+      return (
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuSkeleton />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      );
+    }
+    if (!data?.user) {
+      return (
+        <SidebarMenu>
+          <SidebarMenuButton asChild>
+            <Link
+              className={buttonVariants({
+                size: "lg",
+                variant: "outline",
+              })}
+              href="/auth"
+            >
+              <LogInIcon className="size-5" />
+              Login
+            </Link>
+          </SidebarMenuButton>
+        </SidebarMenu>
+      );
+    }
+
+    return (
+      <NavUser
+        user={{
+          avatar:
+            data.user.image ??
+            `https://api.dicebear.com/9.x/notionists/svg?seed=${data.user.email}&scale=150&backgroundType=solid,gradientLinear&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`,
+          email: data.user.email,
+          name: data.user.name,
+        }}
+      />
+    );
+  }
   return (
     <Sidebar collapsible="offcanvas">
       <SidebarHeader>
@@ -75,68 +79,9 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuButton asChild>
-                <Link
-                  className={buttonVariants({
-                    size: "lg",
-                    variant: "outline",
-                  })}
-                  href="/"
-                >
-                  <PlusIcon className="size-5" />
-                  New Chat
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Chats</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <a href={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        <AppSidebarContent />
       </SidebarContent>
-      <SidebarFooter>
-        {data?.user ? (
-          <NavUser
-            user={{
-              avatar: data.user.image ?? "",
-              email: data.user.email,
-              name: data.user.name,
-            }}
-          />
-        ) : (
-          <SidebarMenu>
-            <SidebarMenuButton asChild>
-              <Link
-                className={buttonVariants({
-                  size: "lg",
-                  variant: "outline",
-                })}
-                href="/auth"
-              >
-                <LogInIcon className="size-5" />
-                Login
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenu>
-        )}
-      </SidebarFooter>
+      <SidebarFooter>{renderFooterContent()}</SidebarFooter>
     </Sidebar>
   );
 }

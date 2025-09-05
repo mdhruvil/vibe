@@ -1,6 +1,11 @@
 import { DurableObject } from "cloudflare:workers";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { convertToModelMessages, streamText, tool } from "ai";
+import {
+  convertToModelMessages,
+  createIdGenerator,
+  streamText,
+  tool,
+} from "ai";
 import z from "zod";
 import type { CustomUIMessage } from ".";
 import { SYSTEM_PROMPT } from "./lib/prompt";
@@ -61,8 +66,17 @@ export class ChatManager extends DurableObject<Env> {
 
     return result.toUIMessageStreamResponse({
       originalMessages: allMessages,
-      onFinish: async ({ messages }) => {
-        await this.ctx.storage.put(keys.MESSAGES, messages);
+      generateMessageId: createIdGenerator({
+        prefix: "msg",
+        size: 16,
+      }),
+      onFinish: async ({ messages, responseMessage }) => {
+        const messagesWithoutNewOne = messages.filter(
+          (msg) => msg.id !== responseMessage.id
+        );
+        const messagesToStore = messagesWithoutNewOne.concat(responseMessage);
+
+        await this.ctx.storage.put(keys.MESSAGES, messagesToStore);
       },
     });
   }
