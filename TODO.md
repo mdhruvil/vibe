@@ -1,0 +1,22 @@
+NOTE: In this file `C` means `client`, `S` means `server` and `C/S` means both client and server.
+
+- [x] C/S: Auth
+- [x] C/S: New chat creation flow
+- [x] C: Basic chat ui
+- [x] C: setup webcontainers
+- [x] C: create `fs` for sample vite app and mount it
+- [x] C/S: implement basic tool calling support for webcontainers
+- [x] C/S: tRPC setup
+- [x] S: Basic implementation of chat manager
+- [ ] S: make chat endpoint auth only (authentication and authorization)
+- [ ] S: add limits for chats (max 3 chats and 3 messages per chat)
+- [ ] S: test and improvise message store in chat manager (idk store one message per row ??)
+- [ ] C/S: image support
+- [ ] S:EXP explore cloudflare sandbox instead of webcontainers
+  - [ ] make routing work (`<chat-id>.mdhruvil.page` => sandbox vite server, for now just hardcode 5173 but in future if needed make it configurable through url)
+  - [ ] make sure to sleep the container after 10 min of inactivity (maybe use DO alarm ?)
+- [ ] Appwrite
+  - [ ] get things from users
+  - [ ] pack the code and upload to Appwrite
+  - [ ] deploy the new version when user tells
+  - [ ] maybe give tool to AI ??
