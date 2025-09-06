@@ -1,6 +1,9 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport } from "ai";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -34,17 +37,10 @@ import {
   WebPreviewNavigation,
   WebPreviewUrl,
 } from "@/components/web-preview";
+import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
 import { useVMStore } from "@/stores/vm";
-import "@xterm/xterm/css/xterm.css";
-import {
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from "ai";
-import Link from "next/link";
-import { useEffect, useState } from "react";
 import type { CustomUIMessage } from "../../../../../server/src/index";
-import { fsTree } from "../../fs";
 
 export function Chat({
   initialMessages,
@@ -53,45 +49,23 @@ export function Chat({
   initialMessages: CustomUIMessage[];
   chatId: string;
 }) {
-  const vm = useVMStore((state) => state.vm);
-  const runCommand = useVMStore((state) => state.runCommand);
-  const initVM = useVMStore((state) => state.initVM);
   const logs = useVMStore((state) => state.logs);
-  const runWithLogs = useVMStore((state) => state.runWithLogs);
   const [url, setUrl] = useState("");
   const [input, setInput] = useState("");
-  const { messages, sendMessage, status, addToolResult } =
-    useChat<CustomUIMessage>({
-      messages: initialMessages,
-      transport: new DefaultChatTransport({
-        api: `http://localhost:8787/api/chat/${chatId}`,
-        prepareSendMessagesRequest({ messages: imessages, id }) {
-          return { body: { message: imessages.at(-1), id } };
-        },
-      }),
-      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-      onToolCall: async ({ toolCall }) => {
-        if (toolCall.dynamic) {
-          return;
-        }
-        console.log({ toolCall });
-        if (toolCall.toolName === "bash") {
-          const command = toolCall.input.command;
-          const parts = command.split(" ");
-          await new Promise((resolve) => setTimeout(resolve, 3000)); // simulate some delay
-          const ilogs = await runWithLogs(parts[0], parts.slice(1));
-          console.log({ ilogs });
-          addToolResult({
-            tool: toolCall.toolName,
-            toolCallId: toolCall.toolCallId,
-            output: ilogs.join("\n"),
-          });
-        }
+
+  const { messages, sendMessage, status } = useChat<CustomUIMessage>({
+    messages: initialMessages,
+    transport: new DefaultChatTransport({
+      api: `${env.NEXT_PUBLIC_API_URL}/api/chat/${chatId}`,
+      prepareSendMessagesRequest({ messages: imessages, id }) {
+        return { body: { message: imessages.at(-1), id } };
       },
-      onFinish: ({ messages: msgs }) => {
-        console.log({ msgs });
-      },
-    });
+    }),
+
+    onFinish: ({ messages: msgs }) => {
+      console.log({ msgs });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,26 +92,6 @@ export function Chat({
       sendMessage({ text: prompt });
     }
   }, [initialMessages.length, messages.length, sendMessage]);
-
-  useEffect(() => {
-    (async () => {
-      if (!vm) {
-        console.log("No VM instance available");
-        await initVM();
-        return;
-      }
-      vm.on("server-ready", (port, outUrl) => {
-        console.log({ port, outUrl });
-        setUrl(outUrl);
-      });
-      await runCommand("pwd");
-      await vm.mount(fsTree);
-      // const installProcess = await runCommand("pnpm", ["install"]);
-      // const code = await installProcess.exit;
-      // console.log({ code });
-      // await runCommand("pnpm", ["run", "dev"]);
-    })();
-  }, [vm, initVM, runCommand]);
 
   return (
     <div className="flex h-screen flex-col">

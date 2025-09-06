@@ -13,6 +13,7 @@ export const Response = memo(
         "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
         className
       )}
+      shikiTheme={["catppuccin-mocha", "catppuccin-frappe"]}
       {...props}
     />
   ),
