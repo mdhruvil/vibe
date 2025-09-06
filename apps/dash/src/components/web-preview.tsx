@@ -104,7 +104,7 @@ export const WebPreviewNavigationButton = ({
   ...props
 }: WebPreviewNavigationButtonProps) => (
   <TooltipProvider>
-    <Tooltip>
+    <Tooltip disableHoverableContent>
       <TooltipTrigger asChild>
         <Button
           className="h-8 w-8 p-0 hover:text-foreground"
@@ -117,7 +117,7 @@ export const WebPreviewNavigationButton = ({
           {children}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>
+      <TooltipContent side="bottom">
         <p>{tooltip}</p>
       </TooltipContent>
     </Tooltip>

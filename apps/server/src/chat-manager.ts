@@ -1,4 +1,4 @@
-import { DurableObject } from "cloudflare:workers";
+import { DurableObject, env } from "cloudflare:workers";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { getSandbox } from "@cloudflare/sandbox";
 import {
@@ -25,20 +25,35 @@ type Sandbox = ReturnType<typeof getSandbox>;
  */
 
 const keys = {
+  CHAT_ID: "chat_id",
   MESSAGES: "messages",
   DEV_SERVER_ID: "dev_server_id",
   DEV_SERVER_URL: "dev_server_url",
 } as const;
 
+export async function getChatManager(id: string) {
+  const stub = env.CHAT_MANAGER.getByName(id);
+  await stub.setChatId(id);
+  return stub;
+}
+
 export class ChatManager extends DurableObject<Env> {
-  sandbox: Sandbox;
+  private _sandbox: Sandbox | undefined;
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
     console.log(`[CHAT_MANAGER] Initialized with ${this.ctx.id.toString()}`);
-    this.sandbox = getSandbox(
-      this.env.Sandbox,
-      this.ctx.id.name ?? crypto.randomUUID()
-    );
+  }
+
+  get sandbox() {
+    if (!this._sandbox) {
+      throw new Error("No Sandbox available");
+    }
+    return this._sandbox;
+  }
+
+  async setChatId(chatId: string) {
+    await this.ctx.storage.put(keys.CHAT_ID, chatId);
+    this._sandbox = getSandbox(this.env.Sandbox, chatId);
   }
 
   async initSandbox() {
@@ -51,16 +66,17 @@ export class ChatManager extends DurableObject<Env> {
       "[CHAT_MANAGER] Sandbox initialized:",
       await this.sandbox.getState()
     );
-    const at = Date.now() + 1000 * 60 * 10; // 10 minutes from now
-    await this.ctx.storage.setAlarm(at);
-    console.log(
-      `[CHAT_MANAGER] Alarm reset to: ${new Date(at).toLocaleString()}`
-    );
+    await this.resetAlarm();
   }
 
   async getMessages(): Promise<CustomUIMessage[]> {
     const messages = (await this.ctx.storage.get(keys.MESSAGES)) ?? [];
     return messages as CustomUIMessage[];
+  }
+
+  async getPreviewUrl() {
+    const url = await this.ctx.storage.get<string>(keys.DEV_SERVER_URL);
+    return url;
   }
 
   async fetch(request: Request) {
@@ -134,11 +150,13 @@ export class ChatManager extends DurableObject<Env> {
   async ensureSandboxIsRunning() {
     const sandboxState = await this.sandbox?.getState();
     console.log(`[CHAT_MANAGER] Found sandbox state: ${sandboxState.status}`);
+
     const activeStates: (typeof sandboxState.status)[] = ["running", "healthy"];
     if (!activeStates.includes(sandboxState?.status)) {
       console.log("[CHAT_MANAGER] Making sure the sandbox is running");
       await this.initSandbox();
     }
+
     await this.ensureDevServerRunning();
   }
 
@@ -147,15 +165,16 @@ export class ChatManager extends DurableObject<Env> {
     await this.ctx.storage.delete(keys.DEV_SERVER_URL);
 
     const process = await this.sandbox.startProcess("bun run dev");
-    console.log(process);
 
-    await this.ctx.storage.put(keys.DEV_SERVER_ID, process.id);
     // TODO: make hostname come from config
     const { url } = await this.sandbox.exposePort(5173, {
       hostname: "localhost:8787",
     });
-    console.log(`[CHAT_MANAGER] Dev server URL: ${url}`);
-    await this.ctx.storage.put(keys.DEV_SERVER_URL, url);
+    const newUrl = url.replace("5173-", "");
+    console.log(`[CHAT_MANAGER] Dev server URL: ${newUrl}`);
+
+    await this.ctx.storage.put(keys.DEV_SERVER_ID, process.id);
+    await this.ctx.storage.put(keys.DEV_SERVER_URL, newUrl);
     return process.id;
   }
 
@@ -163,6 +182,7 @@ export class ChatManager extends DurableObject<Env> {
     let devServerId = (await this.ctx.storage.get(
       keys.DEV_SERVER_ID
     )) as string;
+
     if (!devServerId) {
       console.log("[CHAT_MANAGER] No dev server found, starting a new one");
       devServerId = await this.startDevServer();
@@ -200,6 +220,8 @@ export class ChatManager extends DurableObject<Env> {
   }
 
   async alarm(_alarmInfo?: AlarmInvocationInfo) {
+    await this.ctx.storage.delete(keys.DEV_SERVER_ID);
+    await this.ctx.storage.delete(keys.DEV_SERVER_URL);
     await this.sandbox?.destroy();
     console.log(
       `[CHAT_MANAGER] Sandbox destroyed for id: ${this.ctx.id.toString()}`

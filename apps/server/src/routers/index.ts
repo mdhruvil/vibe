@@ -1,6 +1,7 @@
-import { env } from "cloudflare:workers";
+import { waitUntil } from "cloudflare:workers";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
+import { getChatManager } from "@/chat-manager";
 import { db } from "@/db";
 import { chat } from "@/db/schema/chat";
 import { generateTitle } from "@/lib/ai";
@@ -43,7 +44,7 @@ export const appRouter = router({
           message: "Chat not found",
         });
       }
-      const stub = env.CHAT_MANAGER.getByName(chatRecord.id);
+      const stub = await getChatManager(chatRecord.id);
       // @ts-expect-error <Type instantiation is excessively deep and possibly infinite.>
       const messages = (await stub.getMessages()) as CustomUIMessage[];
       return { ...chatRecord, messages };
@@ -55,5 +56,26 @@ export const appRouter = router({
     });
     return chats;
   }),
+
+  getChatPreviewUrl: protectedProcedure
+    .input(z.object({ chatId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const chatRecord = await db.query.chat.findFirst({
+        where: ({ id, created_by }, { eq, and }) =>
+          and(eq(id, input.chatId), eq(created_by, ctx.session.user.id)),
+      });
+      if (!chatRecord) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Chat not found",
+        });
+      }
+      const stub = await getChatManager(chatRecord.id);
+      const previewUrl = await stub.getPreviewUrl();
+      if (!previewUrl) {
+        waitUntil(stub.ensureSandboxIsRunning());
+      }
+      return { previewUrl: previewUrl ?? null };
+    }),
 });
 export type AppRouter = typeof appRouter;

@@ -1,7 +1,9 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { useQuery } from "@tanstack/react-query";
 import { DefaultChatTransport } from "ai";
+import { SquareArrowOutUpRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
@@ -34,10 +36,12 @@ import {
   WebPreview,
   WebPreviewBody,
   WebPreviewNavigation,
+  WebPreviewNavigationButton,
   WebPreviewUrl,
 } from "@/components/web-preview";
 import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
+import { trpc } from "@/lib/trpc";
 import type { CustomUIMessage } from "../../../../../server/src/index";
 
 export function Chat({
@@ -47,8 +51,20 @@ export function Chat({
   initialMessages: CustomUIMessage[];
   chatId: string;
 }) {
-  const [url, setUrl] = useState("");
   const [input, setInput] = useState("");
+
+  const previewUrlQuery = useQuery(
+    trpc.getChatPreviewUrl.queryOptions(
+      { chatId },
+      {
+        refetchInterval(query) {
+          const previewUrl = query.state.data?.previewUrl;
+          return previewUrl ? false : 2000;
+        },
+      }
+    )
+  );
+  const previewUrl = (previewUrlQuery.data?.previewUrl as string) ?? "";
 
   const { messages, sendMessage, status } = useChat<CustomUIMessage>({
     messages: initialMessages,
@@ -172,14 +188,20 @@ export function Chat({
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel className="p-2" minSize={30}>
-            <WebPreview>
+            <WebPreview defaultUrl={previewUrl}>
               <WebPreviewNavigation>
-                <WebPreviewUrl
-                  onChange={(e) => setUrl(e.target.value)}
-                  value={url}
-                />
+                <WebPreviewUrl value={previewUrl} />
+                <WebPreviewNavigationButton tooltip="Open in new tab">
+                  <Link
+                    href={previewUrl}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    <SquareArrowOutUpRightIcon />
+                  </Link>
+                </WebPreviewNavigationButton>
               </WebPreviewNavigation>
-              <WebPreviewBody src={url} />
+              <WebPreviewBody src={previewUrl} />
             </WebPreview>
           </ResizablePanel>
         </ResizablePanelGroup>

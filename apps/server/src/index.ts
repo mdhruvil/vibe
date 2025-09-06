@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import z from "zod";
+import { getChatManager } from "./chat-manager";
 import { auth } from "./lib/auth";
 import { createContext } from "./lib/context";
 import { appRouter } from "./routers/index";
@@ -20,8 +21,10 @@ app.use(
     credentials: true,
   })
 );
+
 const uuidRegex =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-5][0-9a-f]{3}-[089ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 app.use("*", async (c, next) => {
   const url = new URL(c.req.url);
   const parts = url.hostname.split(".");
@@ -62,9 +65,9 @@ const tools = {
 export type CustomUITools = InferUITools<typeof tools>;
 export type CustomUIMessage = UIMessage<never, UIDataTypes, CustomUITools>;
 
-app.post("/api/chat/:chatId", (c) => {
+app.post("/api/chat/:chatId", async (c) => {
   const chatId = c.req.param("chatId");
-  const chatManager = env.CHAT_MANAGER.getByName(chatId);
+  const chatManager = await getChatManager(chatId);
   return chatManager.fetch(c.req.raw);
 });
 
