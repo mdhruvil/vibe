@@ -33,13 +33,11 @@ import {
 import {
   WebPreview,
   WebPreviewBody,
-  WebPreviewConsole,
   WebPreviewNavigation,
   WebPreviewUrl,
 } from "@/components/web-preview";
 import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
-import { useVMStore } from "@/stores/vm";
 import type { CustomUIMessage } from "../../../../../server/src/index";
 
 export function Chat({
@@ -49,7 +47,6 @@ export function Chat({
   initialMessages: CustomUIMessage[];
   chatId: string;
 }) {
-  const logs = useVMStore((state) => state.logs);
   const [url, setUrl] = useState("");
   const [input, setInput] = useState("");
 
@@ -183,7 +180,6 @@ export function Chat({
                 />
               </WebPreviewNavigation>
               <WebPreviewBody src={url} />
-              <WebPreviewConsole logs={logs} />
             </WebPreview>
           </ResizablePanel>
         </ResizablePanelGroup>
