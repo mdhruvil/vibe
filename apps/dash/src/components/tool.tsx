@@ -43,10 +43,12 @@ const getStatusIcon = (status: ToolUIPart["state"]) => {
   // } as const;
 
   const icons = {
-    "input-streaming": <CircleIcon className="size-3" />,
-    "input-available": <LoaderIcon className="size-3 animate-spin" />,
-    "output-available": <CheckCircleIcon className="size-3 text-green-600" />,
-    "output-error": <XCircleIcon className="size-3 text-red-600" />,
+    "input-streaming": <CircleIcon className="size-3 shrink-0" />,
+    "input-available": <LoaderIcon className="size-3 shrink-0 animate-spin" />,
+    "output-available": (
+      <CheckCircleIcon className="size-3 shrink-0 text-green-600" />
+    ),
+    "output-error": <XCircleIcon className="size-3 shrink-0 text-red-600" />,
   } as const;
 
   return icons[status];
@@ -65,7 +67,7 @@ export const ToolHeader = ({
   >
     <div className="flex items-center gap-2">
       {getStatusIcon(state)}
-      <span className="font-medium text-sm">
+      <span className="line-clamp-1 text-left font-medium text-sm">
         <Streamdown>{text}</Streamdown>
       </span>
     </div>
