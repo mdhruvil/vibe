@@ -42,6 +42,7 @@
     "sonner": "^2.0.7",
     "streamdown": "^1.1.6",
     "strip-ansi": "^7.1.0",
+    "superjson": "^2.2.2",
     "tailwind-merge": "^3.3.1",
     "use-stick-to-bottom": "^1.1.1",
     "zod": "^4.1.5",

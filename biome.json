@@ -18,6 +18,7 @@
       "!**/.wrangler",
       "!**/.alchemy",
       "!**/wrangler.jsonc",
+      "!**/tsconfig.json",
       "!**/.source",
       "!**/worker-configuration.d.ts"
     ]

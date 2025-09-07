@@ -1,12 +1,14 @@
 import { createTRPCClient, httpBatchStreamLink } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import type { AppRouter } from "@vibe/server";
+import SuperJSON from "superjson";
 import { env } from "@/env";
 import { getQueryClient } from "./get-query-client";
 
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchStreamLink({
+      transformer: SuperJSON,
       url: `${env.NEXT_PUBLIC_API_URL}/trpc`,
       fetch(url, options) {
         return fetch(url, {
