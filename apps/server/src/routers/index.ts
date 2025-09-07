@@ -1,9 +1,9 @@
 import { TRPCError } from "@trpc/server";
 import z from "zod";
+import { generateTitle } from "@/ai";
 import { getChatManager } from "@/chat-manager";
 import { db } from "@/db";
 import { chat } from "@/db/schema/chat";
-import { generateTitle } from "@/lib/ai";
 import type { CustomUIMessage } from "..";
 import { protectedProcedure, publicProcedure, router } from "../lib/trpc";
 

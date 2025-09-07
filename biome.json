@@ -32,7 +32,8 @@
         "noNamespaceImport": "off"
       },
       "style": {
-        "noMagicNumbers": "off"
+        "noMagicNumbers": "off",
+        "useConsistentMemberAccessibility": "off"
       },
       "nursery": {
         "noShadow": "off"

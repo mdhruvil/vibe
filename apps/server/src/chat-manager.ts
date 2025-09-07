@@ -1,17 +1,8 @@
 import { DurableObject, env } from "cloudflare:workers";
-import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { type ExecutionSession, getSandbox } from "@cloudflare/sandbox";
-import {
-  convertToModelMessages,
-  createIdGenerator,
-  stepCountIs,
-  streamText,
-  tool,
-} from "ai";
-import z from "zod";
 import type { CustomUIMessage } from ".";
-import { SYSTEM_PROMPT } from "./lib/prompt";
-import { stripIndents } from "./lib/utils";
+import { AI } from "./ai";
+import { keys } from "./lib/constants";
 
 type Env = Cloudflare.Env;
 
@@ -22,13 +13,6 @@ type Env = Cloudflare.Env;
  * appwrite stuff
  * appwrite deployments
  */
-
-const keys = {
-  CHAT_ID: "chat_id",
-  MESSAGES: "messages",
-  DEV_SERVER_ID: "dev_server_id",
-  DEV_SERVER_URL: "dev_server_url",
-} as const;
 
 export async function getChatManager(id: string) {
   const stub = env.CHAT_MANAGER.getByName(id);
@@ -58,8 +42,16 @@ export class ChatManager extends DurableObject<Env> {
     return this._session;
   }
 
+  getFromStore<T>(key: string): Promise<T | undefined> {
+    return this.ctx.storage.get(key);
+  }
+
+  putToStore<T>(key: string, value: T): Promise<void> {
+    return this.ctx.storage.put(key, value);
+  }
+
   async setChatId(chatId: string) {
-    await this.ctx.storage.put(keys.CHAT_ID, chatId);
+    await this.putToStore(keys.CHAT_ID, chatId);
     this._chatId = chatId;
   }
 
@@ -80,84 +72,23 @@ export class ChatManager extends DurableObject<Env> {
   }
 
   async getMessages(): Promise<CustomUIMessage[]> {
-    const messages = (await this.ctx.storage.get(keys.MESSAGES)) ?? [];
+    const messages = (await this.getFromStore(keys.MESSAGES)) ?? [];
     return messages as CustomUIMessage[];
   }
 
   async getPreviewUrl() {
-    let url = await this.ctx.storage.get<string>(keys.DEV_SERVER_URL);
+    let url = await this.getFromStore<string>(keys.DEV_SERVER_URL);
     if (!url) {
       await this.ensureSandboxIsRunning();
-      url = await this.ctx.storage.get<string>(keys.DEV_SERVER_URL);
+      url = await this.getFromStore<string>(keys.DEV_SERVER_URL);
     }
     return url;
   }
 
   async fetch(request: Request) {
-    // biome-ignore lint/suspicious/noExplicitAny: <TODO>
-    const body: any = await request.json();
-    const { message } = body;
-
-    const previousMessages = (await this.getMessages()) ?? [];
-    const allMessages = [...previousMessages, message];
-
     await this.resetAlarm();
-
-    const google = createGoogleGenerativeAI({
-      apiKey: this.env.GOOGLE_GENERATIVE_AI_API_KEY,
-    });
-
-    const result = streamText({
-      model: google("gemini-2.5-flash"),
-      system: SYSTEM_PROMPT,
-      messages: convertToModelMessages(allMessages),
-      stopWhen: stepCountIs(50),
-      tools: {
-        bash: tool({
-          description:
-            "Run a bash command in sandbox. THIS COMMAND CAN'T BE LONG RUNNING.",
-          inputSchema: z.object({
-            command: z.string().describe("command you want to run in sandbox"),
-          }),
-          outputSchema: z.string().describe("output of the command"),
-          execute: async ({ command }) => {
-            try {
-              await this.ensureSandboxIsRunning();
-              const result = await this.session.exec(command);
-              return stripIndents(`
-                exit code: ${result.exitCode}
-                stdout: ${result.stdout}
-                stderr: ${result.stderr}
-                `);
-            } catch (error) {
-              console.error(`[CHAT_MANAGER] Error executing command: ${error}`);
-              const errorMessages =
-                error instanceof Error ? error.message : String(error);
-              return stripIndents(`
-                Something Went Wrong while executing this command.
-                ${errorMessages}
-              `);
-            }
-          },
-        }),
-      },
-    });
-
-    return result.toUIMessageStreamResponse({
-      originalMessages: allMessages,
-      generateMessageId: createIdGenerator({
-        prefix: "msg",
-        size: 16,
-      }),
-      onFinish: async ({ messages, responseMessage }) => {
-        const messagesWithoutNewOne = messages.filter(
-          (msg) => msg.id !== responseMessage.id
-        );
-        const messagesToStore = messagesWithoutNewOne.concat(responseMessage);
-
-        await this.ctx.storage.put(keys.MESSAGES, messagesToStore);
-      },
-    });
+    const ai = new AI(this);
+    return ai.fetch(request);
   }
 
   async ensureSandboxIsRunning() {
@@ -186,15 +117,13 @@ export class ChatManager extends DurableObject<Env> {
     const newUrl = url.replace("5173-", "");
     console.log(`[CHAT_MANAGER] Dev server URL: ${newUrl}`);
 
-    await this.ctx.storage.put(keys.DEV_SERVER_ID, process.id);
-    await this.ctx.storage.put(keys.DEV_SERVER_URL, newUrl);
+    await this.putToStore(keys.DEV_SERVER_ID, process.id);
+    await this.putToStore(keys.DEV_SERVER_URL, newUrl);
     return process.id;
   }
 
   async ensureDevServerRunning() {
-    let devServerId = (await this.ctx.storage.get(
-      keys.DEV_SERVER_ID
-    )) as string;
+    let devServerId = (await this.getFromStore(keys.DEV_SERVER_ID)) as string;
 
     if (!devServerId) {
       console.log("[CHAT_MANAGER] No dev server found, starting a new one");

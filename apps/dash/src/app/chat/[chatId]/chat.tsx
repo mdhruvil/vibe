@@ -6,6 +6,7 @@ import { DefaultChatTransport } from "ai";
 import { SquareArrowOutUpRightIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
   Conversation,
   ConversationContent,
@@ -41,7 +42,9 @@ import {
 } from "@/components/web-preview";
 import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
+import { ChatError } from "@/lib/errors";
 import { trpc } from "@/lib/trpc";
+import { fetchWithErrorHandlers } from "@/lib/utils";
 import type { CustomUIMessage } from "../../../../../server/src/index";
 
 export function Chat({
@@ -61,14 +64,22 @@ export function Chat({
   const { messages, sendMessage, status } = useChat<CustomUIMessage>({
     messages: initialMessages,
     transport: new DefaultChatTransport({
+      fetch: fetchWithErrorHandlers,
       api: `${env.NEXT_PUBLIC_API_URL}/api/chat/${chatId}`,
       prepareSendMessagesRequest({ messages: imessages, id }) {
         return { body: { message: imessages.at(-1), id } };
       },
+      credentials: "include",
     }),
 
     onFinish: ({ messages: msgs }) => {
       console.log({ msgs });
+    },
+    onError: (error) => {
+      if (error instanceof ChatError) {
+        toast.error(error.message);
+      }
+      console.log({ error });
     },
   });
 
