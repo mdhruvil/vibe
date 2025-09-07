@@ -1,4 +1,25 @@
-Vibe Agent Guide
+Vibe
+
+Vibe is a vibecoding tool that lets user vibecode app and directly deploy to thier appwrite account.
+
+Tech Stack
+
+- Cloudflare Workers
+- Cloudflare Durable Objects
+- Cloudflare Sandbox (built on top of cloudflare containers)
+- Next.js
+- React
+- TypeScript
+- shadcn
+- tailwindcss
+
+## IMPORTANT
+
+- Make sure you refer to latest docs with context7 mcp server. IT IS CRUCIAL FOR STAYING UP-TO-DATE.
+- use context7 mcp server to get latest docs for any library
+- use https://raw.githubusercontent.com/cloudflare/sandbox-sdk/refs/heads/main/packages/sandbox/README.md for cloudflare sandbox docs
+
+## RULES
 
 - Build: root `pnpm build` (Turbo), dev `pnpm dev`.
 - Dash app: `pnpm -C apps/dash dev|build|start`.

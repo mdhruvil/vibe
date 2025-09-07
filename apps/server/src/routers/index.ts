@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import z from "zod";
 import { generateTitle } from "@/ai";
 import { getChatManager } from "@/chat-manager";
+import { env } from "cloudflare:workers";
 import { db } from "@/db";
 import { chat } from "@/db/schema/chat";
 import type { CustomUIMessage } from "..";
@@ -43,7 +44,7 @@ export const appRouter = router({
           message: "Chat not found",
         });
       }
-      const stub = await getChatManager(chatRecord.id);
+      const stub = await getChatManager(env as Cloudflare.Env, chatRecord.id);
       // @ts-expect-error <Type instantiation is excessively deep and possibly infinite.>
       const messages = (await stub.getMessages()) as CustomUIMessage[];
       return { ...chatRecord, messages };
@@ -69,7 +70,7 @@ export const appRouter = router({
           message: "Chat not found",
         });
       }
-      const stub = await getChatManager(chatRecord.id);
+      const stub = await getChatManager(env as Cloudflare.Env, chatRecord.id);
       const previewUrl = await stub.getPreviewUrl();
       return { previewUrl: previewUrl ?? null };
     }),

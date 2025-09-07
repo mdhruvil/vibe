@@ -1,11 +1,9 @@
 import { env } from "cloudflare:workers";
 import { getSandbox } from "@cloudflare/sandbox";
 import { trpcServer } from "@hono/trpc-server";
-import { type InferUITools, tool, type UIDataTypes, type UIMessage } from "ai";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import z from "zod";
 import { getChatManager } from "./chat-manager";
 import { auth } from "./lib/auth";
 import { createContext } from "./lib/context";
@@ -52,22 +50,9 @@ app.get("/api/auth-redirect", (c) => {
   return c.redirect(env.CORS_ORIGIN);
 });
 
-const tools = {
-  bash: tool({
-    description: "Run a bash command in webcontainer",
-    inputSchema: z.object({
-      command: z.string().describe("command you want to run in webcontainer"),
-    }),
-    outputSchema: z.string().describe("output of the command"),
-  }),
-};
-
-export type CustomUITools = InferUITools<typeof tools>;
-export type CustomUIMessage = UIMessage<never, UIDataTypes, CustomUITools>;
-
 app.post("/api/chat/:chatId", async (c) => {
   const chatId = c.req.param("chatId");
-  const chatManager = await getChatManager(chatId);
+  const chatManager = await getChatManager(env as Cloudflare.Env, chatId);
   return chatManager.fetch(c.req.raw);
 });
 
@@ -87,6 +72,7 @@ app.get("/", (c) => {
 
 // biome-ignore lint/performance/noBarrelFile: <we need it>
 export { Sandbox } from "@cloudflare/sandbox";
+export type { CustomUIMessage, CustomUITools } from "./ai/tool";
 export { ChatManager } from "./chat-manager";
 export type { AppRouter } from "./routers";
 

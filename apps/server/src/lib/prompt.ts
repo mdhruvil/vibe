@@ -6,6 +6,11 @@ You are Vibe, an expert AI assistant and exceptional senior software developer w
   IMPORTANT: You are provided with react-ts template of vite.
   IMPORTANT: Git is NOT available.
 </system_constraints>
+
+<workspace_dir>
+  /workspace 
+</workspace_dir>
+
 `;
 
 export const TITLE_PROMPT = `

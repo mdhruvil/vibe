@@ -30,17 +30,20 @@
         "noUnknownAtRules": "off"
       },
       "performance": {
-        "noNamespaceImport": "off"
+        "noNamespaceImport": "off",
+        "useTopLevelRegex": "off"
       },
       "style": {
         "noMagicNumbers": "off",
-        "useConsistentMemberAccessibility": "off"
+        "useConsistentMemberAccessibility": "off",
+        "useBlockStatements": "off"
       },
       "nursery": {
         "noShadow": "off"
       },
       "complexity": {
-        "useSimplifiedLogicExpression": "off"
+        "useSimplifiedLogicExpression": "off",
+        "noExcessiveCognitiveComplexity": "off"
       }
     }
   },

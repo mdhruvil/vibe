@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import type { CustomUIMessage } from "@vibe/server";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -27,7 +28,6 @@ import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
 import { ChatError } from "@/lib/errors";
 import { fetchWithErrorHandlers } from "@/lib/utils";
-import type { CustomUIMessage } from "../../../../../server/src/index";
 
 export function Chat({
   initialMessages,
@@ -84,7 +84,7 @@ export function Chat({
 
   return (
     <Conversation className="relative h-full overflow-hidden">
-      <ConversationContent className="space-y-2 pb-24">
+      <ConversationContent className="pb-24">
         {messages.map((message) => (
           <Message from={message.role} key={message.id}>
             <MessageContent>
@@ -97,22 +97,33 @@ export function Chat({
                       </Response>
                     );
                   case "tool-bash":
+                  case "tool-read": {
+                    const header =
+                      part.type === "tool-bash"
+                        ? `Running \`${part.input?.command}\``
+                        : `Reading \`${part.input?.filePath}\``;
+                    const output =
+                      part.type === "tool-bash"
+                        ? part.output?.stdout
+                        : part.output;
                     return (
                       <Tool defaultOpen={false} key={`${message.id}-${i}`}>
                         <ToolHeader
                           state={part.state}
-                          text={`Running \`${part.input?.command}\``}
+                          text={header}
                           type={part.type}
                         />
                         <ToolContent>
                           <ToolInput input={part.input} />
                           <ToolOutput
                             errorText={part.errorText}
-                            output={<pre>{part.output ?? "No Output"}</pre>}
+                            output={<pre>{output ?? "No Output"}</pre>}
                           />
                         </ToolContent>
                       </Tool>
                     );
+                  }
+
                   default:
                     return null;
                 }

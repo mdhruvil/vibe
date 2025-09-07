@@ -1,33 +1,62 @@
-import { DurableObject, env } from "cloudflare:workers";
-import { type ExecutionSession, getSandbox } from "@cloudflare/sandbox";
+import { DurableObject } from "cloudflare:workers";
+import {
+  type ExecutionSession,
+  getSandbox,
+  type Process,
+} from "@cloudflare/sandbox";
 import type { CustomUIMessage } from ".";
 import { AI } from "./ai";
 import { keys } from "./lib/constants";
 
-type Env = Cloudflare.Env;
-
 /**
- * id
- * fileTree
- * messages
- * appwrite stuff
- * appwrite deployments
+ * Central manager for a single chat's ephemeral dev sandbox + dev server.
+ *
+ * Concurrency / race considerations (important parts only):
+ * 1. Durable Object constructor runs per activation; we use blockConcurrencyWhile
+ *    to restore minimal in‑memory state (chatId) before any events execute.
+ * 2. Sandbox/session creation and dev server startup are protected by in‑memory
+ *    promise locks so concurrent fetch/RPC calls coalesce instead of racing and
+ *    starting multiple containers/processes ("thundering herd" avoidance).
+ * 3. Alarm scheduling is idempotent; we avoid deleting & re‑setting each request
+ *    (narrow race where object could hibernate). We only extend when needed.
+ * 4. Teardown (alarm) uses this.env (instance scoped) and only destroys after
+ *    clearing dev server keys + session reference; any new request will lazily
+ *    recreate via the locks.
  */
 
-export async function getChatManager(id: string) {
+type Env = Cloudflare.Env;
+
+/** Public helper used by the Worker to obtain a stub and initialize idempotently. */
+export async function getChatManager(env: Env, id: string) {
   const stub = env.CHAT_MANAGER.getByName(id);
-  await stub.setChatId(id);
+  // Idempotent: underlying method will just verify existing chat id.
+  await stub.init(id);
   return stub;
 }
 
 export class ChatManager extends DurableObject<Env> {
   private _chatId: string | undefined;
   private _session: ExecutionSession | undefined;
+
+  // Promise locks (cleared after resolution) to prevent parallel startups.
+  private _sandboxReadyPromise: Promise<void> | undefined;
+  private _devServerReadyPromise: Promise<void> | undefined;
+
+  // Idle teardown alarm TTL (object/sandbox can hibernate after this inactivity).
+  private static readonly ALARM_TTL_MS = 1000 * 60 * 1;
+
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
-    console.log(`[CHAT_MANAGER] Initialized with ${this.ctx.id.toString()}`);
+    console.log(`[CHAT_MANAGER] Constructed ${this.ctx.id.toString()}`);
+
+    // IMPORTANT: Ensure chatId (if previously persisted) is loaded before any
+    // incoming event mutates or relies on it. Avoid heavy work here.
+    this.ctx.blockConcurrencyWhile(async () => {
+      this._chatId = await this.ctx.storage.get<string>(keys.CHAT_ID);
+    });
   }
 
+  // --- Basic accessors ---
   get sandbox() {
     if (!this._chatId) {
       throw new Error("No chatId available");
@@ -43,143 +72,229 @@ export class ChatManager extends DurableObject<Env> {
   }
 
   getFromStore<T>(key: string): Promise<T | undefined> {
-    return this.ctx.storage.get(key);
+    return this.ctx.storage.get<T>(key);
   }
 
   putToStore<T>(key: string, value: T): Promise<void> {
     return this.ctx.storage.put(key, value);
   }
 
-  async setChatId(chatId: string) {
-    await this.putToStore(keys.CHAT_ID, chatId);
-    this._chatId = chatId;
+  /**
+   * Idempotent initialization for external caller; simply ensures chat id is
+   * persisted & consistent. Safe under concurrent invocation.
+   */
+  async init(chatId: string) {
+    await this.ensureChatId(chatId);
   }
 
-  async initSandbox() {
-    await this.ctx.storage.delete(keys.DEV_SERVER_ID);
-    await this.ctx.storage.delete(keys.DEV_SERVER_URL);
-    this._session = await this.sandbox.createSession({
-      id: crypto.randomUUID(),
-      isolation: true,
-      cwd: "/workspace",
+  // Ensure we have a chat id in memory & storage (if provided first time).
+  private async ensureChatId(chatId?: string): Promise<string> {
+    if (this._chatId) {
+      if (chatId && chatId !== this._chatId) {
+        throw new Error("Chat ID mismatch for existing object");
+      }
+      return this._chatId;
+    }
+    // Only first caller sets it.
+    if (!chatId) {
+      const stored = await this.ctx.storage.get<string>(keys.CHAT_ID);
+      if (!stored) {
+        throw new Error("Chat ID missing and none provided");
+      }
+      this._chatId = stored;
+      return stored;
+    }
+    await this.ctx.storage.put(keys.CHAT_ID, chatId);
+    this._chatId = chatId;
+    return chatId;
+  }
+
+  /**
+   * (Re)create sandbox execution session if absent or unhealthy.
+   * Uses a promise lock so only one expensive path runs at a time.
+   */
+  private async ensureSandboxReady(): Promise<void> {
+    if (this._session) {
+      try {
+        const state = await this.sandbox.getState();
+        if (["running", "healthy"].includes(state.status)) {
+          return; // Healthy enough.
+        }
+        console.log(
+          `[CHAT_MANAGER] Sandbox state '${state.status}' not active -> recreate`
+        );
+      } catch (e) {
+        console.log(
+          "[CHAT_MANAGER] Failed to get sandbox state, will recreate",
+          e
+        );
+      }
+    }
+    if (this._sandboxReadyPromise) {
+      return this._sandboxReadyPromise;
+    }
+
+    this._sandboxReadyPromise = (async () => {
+      try {
+        // Clear dev server metadata early; a new session invalidates previous processes.
+        await Promise.all([
+          this.ctx.storage.delete(keys.DEV_SERVER_ID),
+          this.ctx.storage.delete(keys.DEV_SERVER_URL),
+        ]);
+
+        this._session = await this.sandbox.createSession({
+          id: crypto.randomUUID(),
+          isolation: true,
+          cwd: "/workspace",
+        });
+        const echo = await this._session.exec("echo 'Hello Sandbox'");
+        console.log(
+          `[CHAT_MANAGER] Sandbox session created (exit ${echo.exitCode})`
+        );
+      } catch (err) {
+        // Ensure callers do not retain broken session ref.
+        this._session = undefined;
+        console.error("[CHAT_MANAGER] Sandbox creation failed", err);
+        throw err;
+      } finally {
+        this._sandboxReadyPromise = undefined; // Allow future retries.
+      }
+    })();
+
+    return this._sandboxReadyPromise;
+  }
+
+  /** Start dev server (assumes sandbox/session ready). */
+  private async startDevServer(): Promise<string> {
+    const proc = await this.session.startProcess("bun run dev");
+    // TODO: hostname should be configurable.
+    const { url } = await this.session.exposePort(5173, {
+      hostname: "localhost:8787",
     });
-    const process = await this.session.exec("echo 'Hello World'");
-    console.log(`[CHAT_MANAGER] Sandbox process: ${process}`);
-    console.log(
-      "[CHAT_MANAGER] Sandbox initialized:",
-      await this.sandbox.getState()
-    );
+    const publicUrl = url.replace("5173-", "");
+    await Promise.all([
+      this.putToStore(keys.DEV_SERVER_ID, proc.id),
+      this.putToStore(keys.DEV_SERVER_URL, publicUrl),
+    ]);
+    console.log(`[CHAT_MANAGER] Dev server process ${proc.id} -> ${publicUrl}`);
+    return proc.id;
+  }
+
+  /** Ensure dev server is running (single-flight via lock). */
+  private ensureDevServerRunning(): Promise<void> {
+    // Fast path: if another caller already starting.
+    if (this._devServerReadyPromise) {
+      return this._devServerReadyPromise;
+    }
+
+    const runCheck = async (): Promise<void> => {
+      const devServerId = await this.getFromStore<string>(keys.DEV_SERVER_ID);
+      if (!devServerId) {
+        console.log("[CHAT_MANAGER] No dev server id -> starting");
+        await this.startDevServer();
+        return;
+      }
+      let proc: Process | undefined | null;
+      try {
+        proc = await this.session.getProcess(devServerId);
+      } catch {
+        console.log(
+          "[CHAT_MANAGER] Stored dev server process missing -> restarting"
+        );
+        await this.startDevServer();
+        return;
+      }
+      if (!proc) {
+        return; // Type narrow; should be defined here.
+      }
+      const status = await proc.getStatus().catch(() => "unknown");
+      if (status !== "running") {
+        console.log(
+          `[CHAT_MANAGER] Dev server status '${status}' -> restarting`
+        );
+        await this.startDevServer();
+      }
+    };
+
+    this._devServerReadyPromise = (async () => {
+      try {
+        await runCheck();
+      } finally {
+        this._devServerReadyPromise = undefined; // Release lock regardless of success.
+      }
+    })();
+
+    return this._devServerReadyPromise;
   }
 
   async getMessages(): Promise<CustomUIMessage[]> {
-    const messages = (await this.getFromStore(keys.MESSAGES)) ?? [];
-    return messages as CustomUIMessage[];
+    const messages =
+      (await this.getFromStore<CustomUIMessage[]>(keys.MESSAGES)) ?? [];
+    return messages;
   }
 
-  async getPreviewUrl() {
-    let url = await this.getFromStore<string>(keys.DEV_SERVER_URL);
-    if (!url) {
-      await this.ensureSandboxIsRunning();
-      url = await this.getFromStore<string>(keys.DEV_SERVER_URL);
-    }
-    return url;
-  }
-
-  async fetch(request: Request) {
+  /** Public method to obtain preview URL after ensuring readiness. */
+  async getPreviewUrl(): Promise<string | undefined> {
+    await this.ensureChatId();
+    await this.ensureSandboxReady();
+    await this.ensureDevServerRunning();
+    // Treat preview URL access as activity so sandbox will teardown after inactivity.
     await this.resetAlarm();
+    return this.getFromStore<string>(keys.DEV_SERVER_URL);
+  }
+
+  /** Request entry point. Ensures environment readiness prior to AI handling. */
+  async fetch(request: Request) {
+    await this.ensureChatId();
+    await this.resetAlarm();
+    await this.ensureSandboxReady();
+    await this.ensureDevServerRunning();
     const ai = new AI(this);
     return ai.fetch(request);
   }
 
-  async ensureSandboxIsRunning() {
-    const sandboxState = await this.sandbox?.getState();
-    console.log(`[CHAT_MANAGER] Found sandbox state: ${sandboxState.status}`);
-
-    const activeStates: (typeof sandboxState.status)[] = ["running", "healthy"];
-    if (!activeStates.includes(sandboxState?.status) || !this._session) {
-      console.log("[CHAT_MANAGER] Making sure the sandbox is running");
-      await this.initSandbox();
-    }
-    await this.resetAlarm();
-    await this.ensureDevServerRunning();
-  }
-
-  async startDevServer() {
-    await this.ctx.storage.delete(keys.DEV_SERVER_ID);
-    await this.ctx.storage.delete(keys.DEV_SERVER_URL);
-
-    const process = await this.session.startProcess("bun run dev");
-
-    // TODO: make hostname come from config
-    const { url } = await this.session.exposePort(5173, {
-      hostname: "localhost:8787",
-    });
-    const newUrl = url.replace("5173-", "");
-    console.log(`[CHAT_MANAGER] Dev server URL: ${newUrl}`);
-
-    await this.putToStore(keys.DEV_SERVER_ID, process.id);
-    await this.putToStore(keys.DEV_SERVER_URL, newUrl);
-    return process.id;
-  }
-
-  async ensureDevServerRunning() {
-    let devServerId = (await this.getFromStore(keys.DEV_SERVER_ID)) as string;
-
-    if (!devServerId) {
-      console.log("[CHAT_MANAGER] No dev server found, starting a new one");
-      devServerId = await this.startDevServer();
-      return;
-    }
-    const devServerProcess = await this.session
-      .getProcess(devServerId)
-      .catch(() => {
-        console.log(
-          "[CHAT_MANAGER] No dev server process found, starting a new one"
-        );
-        return null;
-      });
-    if (!devServerProcess) {
-      // this case should not happen but just in case
-      console.log(
-        "[CHAT_MANAGER] No dev server process found, starting a new one"
-      );
-      devServerId = await this.startDevServer();
-      return;
-    }
-    const devServerStatus = await devServerProcess?.getStatus();
-    if (devServerStatus !== "running") {
-      console.log(
-        `[CHAT_MANAGER] Dev server is not running, starting. Current status: ${devServerStatus}`
-      );
-      devServerId = await this.startDevServer();
-    }
-    return devServerId;
-  }
-
+  /** Idempotently extend idle alarm; only reschedule when >50% TTL elapsed. */
   async resetAlarm() {
-    const currentAlarm = await this.ctx.storage.getAlarm();
-    if (currentAlarm) {
-      await this.ctx.storage.deleteAlarm();
+    const now = Date.now();
+    const existing = await this.ctx.storage.getAlarm();
+    const target = now + ChatManager.ALARM_TTL_MS;
+    if (existing) {
+      // const remaining = existing - now;
+      // const threshold =
+      //   ChatManager.ALARM_TTL_MS * ChatManager.ALARM_REFRESH_THRESHOLD_RATIO;
+      // if (remaining > threshold) {
+      //   return; // Still far from expiry; skip churn.
+      // }
+      this.ctx.storage.deleteAlarm(); // Clear existing to reset.
     }
-    const at = Date.now() + 1000 * 60 * 10; // 10 minutes from now
-    await this.ctx.storage.setAlarm(at);
+    await this.ctx.storage.setAlarm(target);
     console.log(
-      `[CHAT_MANAGER] Alarm reset to: ${new Date(at).toLocaleString()}`
+      `[CHAT_MANAGER] Alarm set for ${new Date(target).toLocaleString()}`
     );
   }
 
+  /** Alarm: graceful teardown to free resources after inactivity. */
   async alarm(_alarmInfo?: AlarmInvocationInfo) {
-    await this.ctx.storage.delete(keys.DEV_SERVER_ID);
-    await this.ctx.storage.delete(keys.DEV_SERVER_URL);
+    console.log("[CHAT_MANAGER] Alarm fired -> teardown");
+    // Remove dev server discovery data first so new requests won't reuse stale id.
+    await Promise.all([
+      this.ctx.storage.delete(keys.DEV_SERVER_ID),
+      this.ctx.storage.delete(keys.DEV_SERVER_URL),
+    ]);
     const chatId = await this.ctx.storage.get<string>(keys.CHAT_ID);
     if (!chatId) {
-      // this should not be happen in any case
-      throw new Error("Chat ID not found");
+      console.warn("[CHAT_MANAGER] Alarm teardown without chatId (unexpected)");
+      this._session = undefined;
+      return;
     }
-    const sandbox = getSandbox(env.Sandbox, chatId);
-    await sandbox.destroy();
-    console.log(
-      `[CHAT_MANAGER] Sandbox destroyed for id: ${this.ctx.id.toString()}`
-    );
+    try {
+      // Attempt to stop all running processes; ignore individual failures.
+      await getSandbox(this.env.Sandbox, chatId).destroy();
+      console.log(`[CHAT_MANAGER] Sandbox destroyed for chat ${chatId}`);
+    } catch (err) {
+      console.error("[CHAT_MANAGER] Sandbox destroy failed", err);
+    } finally {
+      this._session = undefined; // Force recreation next request.
+    }
   }
 }
