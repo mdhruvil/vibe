@@ -2,7 +2,7 @@ import { tool } from "ai";
 import z from "zod";
 import type { VibeContext } from "../tool";
 
-export const BashTool = (ctx: VibeContext) => {
+export const bashTool = (ctx: VibeContext) => {
   return tool({
     name: "bash",
     description:

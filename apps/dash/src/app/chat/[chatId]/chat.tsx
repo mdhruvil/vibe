@@ -17,13 +17,7 @@ import {
   PromptInputTextarea,
 } from "@/components/prompt-input";
 import { Response } from "@/components/response";
-import {
-  Tool,
-  ToolContent,
-  ToolHeader,
-  ToolInput,
-  ToolOutput,
-} from "@/components/tool";
+import { Tool, ToolContent, ToolHeader, ToolInput } from "@/components/tool";
 import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
 import { ChatError } from "@/lib/errors";
@@ -53,6 +47,9 @@ export function Chat({
         toast.error(error.message);
       }
       console.log({ error });
+    },
+    onFinish: (data) => {
+      console.log(data);
     },
   });
 
@@ -97,15 +94,9 @@ export function Chat({
                       </Response>
                     );
                   case "tool-bash":
-                  case "tool-read": {
-                    const header =
-                      part.type === "tool-bash"
-                        ? `Running \`${part.input?.command}\``
-                        : `Reading \`${part.input?.filePath}\``;
-                    const output =
-                      part.type === "tool-bash"
-                        ? part.output?.stdout
-                        : part.output;
+                  case "tool-read":
+                  case "tool-webfetch": {
+                    const header = part.type;
                     return (
                       <Tool defaultOpen={false} key={`${message.id}-${i}`}>
                         <ToolHeader
@@ -115,10 +106,6 @@ export function Chat({
                         />
                         <ToolContent>
                           <ToolInput input={part.input} />
-                          <ToolOutput
-                            errorText={part.errorText}
-                            output={<pre>{output ?? "No Output"}</pre>}
-                          />
                         </ToolContent>
                       </Tool>
                     );

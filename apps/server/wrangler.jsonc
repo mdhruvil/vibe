@@ -41,5 +41,8 @@
       "tag": "v1",
       "new_sqlite_classes": ["ChatManager", "Sandbox"]
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI"
+  }
 }
