@@ -44,7 +44,7 @@ export default function Page() {
   return (
     <div className="flex h-svh w-full items-center justify-center gap-4">
       <PromptInput
-        className="relative mx-auto mt-4 w-full max-w-xl"
+        className="relative mx-5 mt-4 w-full max-w-xl"
         onSubmit={handleSubmit}
       >
         <PromptInputTextarea

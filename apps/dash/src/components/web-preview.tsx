@@ -155,12 +155,12 @@ export const WebPreviewUrl = ({
 };
 
 export type WebPreviewBodyProps = ComponentProps<"iframe"> & {
-  loading?: ReactNode;
+  loadingEl?: ReactNode;
 };
 
 export const WebPreviewBody = ({
   className,
-  loading,
+  loadingEl,
   src,
   ...props
 }: WebPreviewBodyProps) => {
@@ -175,7 +175,7 @@ export const WebPreviewBody = ({
         title="Preview"
         {...props}
       />
-      {loading}
+      {loadingEl}
     </div>
   );
 };
