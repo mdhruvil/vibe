@@ -1,6 +1,6 @@
 import { DurableObject, env } from "cloudflare:workers";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { getSandbox } from "@cloudflare/sandbox";
+import { type ExecutionSession, getSandbox } from "@cloudflare/sandbox";
 import {
   convertToModelMessages,
   createIdGenerator,
@@ -14,7 +14,6 @@ import { SYSTEM_PROMPT } from "./lib/prompt";
 import { stripIndents } from "./lib/utils";
 
 type Env = Cloudflare.Env;
-type Sandbox = ReturnType<typeof getSandbox>;
 
 /**
  * id
@@ -38,35 +37,46 @@ export async function getChatManager(id: string) {
 }
 
 export class ChatManager extends DurableObject<Env> {
-  private _sandbox: Sandbox | undefined;
+  private _chatId: string | undefined;
+  private _session: ExecutionSession | undefined;
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
     console.log(`[CHAT_MANAGER] Initialized with ${this.ctx.id.toString()}`);
   }
 
   get sandbox() {
-    if (!this._sandbox) {
-      throw new Error("No Sandbox available");
+    if (!this._chatId) {
+      throw new Error("No chatId available");
     }
-    return this._sandbox;
+    return getSandbox(this.env.Sandbox, this._chatId);
+  }
+
+  get session() {
+    if (!this._session) {
+      throw new Error("No session available");
+    }
+    return this._session;
   }
 
   async setChatId(chatId: string) {
     await this.ctx.storage.put(keys.CHAT_ID, chatId);
-    this._sandbox = getSandbox(this.env.Sandbox, chatId);
+    this._chatId = chatId;
   }
 
   async initSandbox() {
     await this.ctx.storage.delete(keys.DEV_SERVER_ID);
     await this.ctx.storage.delete(keys.DEV_SERVER_URL);
-
-    const process = await this.sandbox.exec("echo 'Hello World'");
+    this._session = await this.sandbox.createSession({
+      id: crypto.randomUUID(),
+      isolation: true,
+      cwd: "/workspace",
+    });
+    const process = await this.session.exec("echo 'Hello World'");
     console.log(`[CHAT_MANAGER] Sandbox process: ${process}`);
     console.log(
       "[CHAT_MANAGER] Sandbox initialized:",
       await this.sandbox.getState()
     );
-    await this.resetAlarm();
   }
 
   async getMessages(): Promise<CustomUIMessage[]> {
@@ -75,7 +85,11 @@ export class ChatManager extends DurableObject<Env> {
   }
 
   async getPreviewUrl() {
-    const url = await this.ctx.storage.get<string>(keys.DEV_SERVER_URL);
+    let url = await this.ctx.storage.get<string>(keys.DEV_SERVER_URL);
+    if (!url) {
+      await this.ensureSandboxIsRunning();
+      url = await this.ctx.storage.get<string>(keys.DEV_SERVER_URL);
+    }
     return url;
   }
 
@@ -87,7 +101,6 @@ export class ChatManager extends DurableObject<Env> {
     const previousMessages = (await this.getMessages()) ?? [];
     const allMessages = [...previousMessages, message];
 
-    this.ctx.waitUntil(this.ensureSandboxIsRunning());
     await this.resetAlarm();
 
     const google = createGoogleGenerativeAI({
@@ -110,7 +123,7 @@ export class ChatManager extends DurableObject<Env> {
           execute: async ({ command }) => {
             try {
               await this.ensureSandboxIsRunning();
-              const result = await this.sandbox.exec(command);
+              const result = await this.session.exec(command);
               return stripIndents(`
                 exit code: ${result.exitCode}
                 stdout: ${result.stdout}
@@ -152,11 +165,11 @@ export class ChatManager extends DurableObject<Env> {
     console.log(`[CHAT_MANAGER] Found sandbox state: ${sandboxState.status}`);
 
     const activeStates: (typeof sandboxState.status)[] = ["running", "healthy"];
-    if (!activeStates.includes(sandboxState?.status)) {
+    if (!activeStates.includes(sandboxState?.status) || !this._session) {
       console.log("[CHAT_MANAGER] Making sure the sandbox is running");
       await this.initSandbox();
     }
-
+    await this.resetAlarm();
     await this.ensureDevServerRunning();
   }
 
@@ -164,10 +177,10 @@ export class ChatManager extends DurableObject<Env> {
     await this.ctx.storage.delete(keys.DEV_SERVER_ID);
     await this.ctx.storage.delete(keys.DEV_SERVER_URL);
 
-    const process = await this.sandbox.startProcess("bun run dev");
+    const process = await this.session.startProcess("bun run dev");
 
     // TODO: make hostname come from config
-    const { url } = await this.sandbox.exposePort(5173, {
+    const { url } = await this.session.exposePort(5173, {
       hostname: "localhost:8787",
     });
     const newUrl = url.replace("5173-", "");
@@ -188,7 +201,14 @@ export class ChatManager extends DurableObject<Env> {
       devServerId = await this.startDevServer();
       return;
     }
-    const devServerProcess = await this.sandbox.getProcess(devServerId);
+    const devServerProcess = await this.session
+      .getProcess(devServerId)
+      .catch(() => {
+        console.log(
+          "[CHAT_MANAGER] No dev server process found, starting a new one"
+        );
+        return null;
+      });
     if (!devServerProcess) {
       // this case should not happen but just in case
       console.log(
@@ -222,7 +242,13 @@ export class ChatManager extends DurableObject<Env> {
   async alarm(_alarmInfo?: AlarmInvocationInfo) {
     await this.ctx.storage.delete(keys.DEV_SERVER_ID);
     await this.ctx.storage.delete(keys.DEV_SERVER_URL);
-    await this.sandbox?.destroy();
+    const chatId = await this.ctx.storage.get<string>(keys.CHAT_ID);
+    if (!chatId) {
+      // this should not be happen in any case
+      throw new Error("Chat ID not found");
+    }
+    const sandbox = getSandbox(env.Sandbox, chatId);
+    await sandbox.destroy();
     console.log(
       `[CHAT_MANAGER] Sandbox destroyed for id: ${this.ctx.id.toString()}`
     );

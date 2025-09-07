@@ -1,4 +1,3 @@
-import { waitUntil } from "cloudflare:workers";
 import { TRPCError } from "@trpc/server";
 import z from "zod";
 import { getChatManager } from "@/chat-manager";
@@ -72,9 +71,6 @@ export const appRouter = router({
       }
       const stub = await getChatManager(chatRecord.id);
       const previewUrl = await stub.getPreviewUrl();
-      if (!previewUrl) {
-        waitUntil(stub.ensureSandboxIsRunning());
-      }
       return { previewUrl: previewUrl ?? null };
     }),
 });

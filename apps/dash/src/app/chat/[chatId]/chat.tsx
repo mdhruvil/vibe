@@ -54,15 +54,7 @@ export function Chat({
   const [input, setInput] = useState("");
 
   const previewUrlQuery = useQuery(
-    trpc.getChatPreviewUrl.queryOptions(
-      { chatId },
-      {
-        refetchInterval(query) {
-          const previewUrl = query.state.data?.previewUrl;
-          return previewUrl ? false : 2000;
-        },
-      }
-    )
+    trpc.getChatPreviewUrl.queryOptions({ chatId })
   );
   const previewUrl = (previewUrlQuery.data?.previewUrl as string) ?? "";
 
