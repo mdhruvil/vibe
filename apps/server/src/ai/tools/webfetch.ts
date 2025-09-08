@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { tool } from "ai";
 import z from "zod";
 import { stripIndents } from "@/lib/utils";
+import type { VibeContext } from "../tool";
 
 const DESCRIPTION = stripIndents(`
 Fetch content from a URL and return text, markdown, or raw HTML.
@@ -68,8 +69,8 @@ async function extractTextFromHTML(html: string): Promise<string> {
   return text.trim();
 }
 
-export const webfetchTool = () =>
-  tool({
+export const webfetchTool = (_ctx: VibeContext) => {
+  return tool({
     name: "webfetch",
     description: DESCRIPTION,
     inputSchema: z.object({
@@ -161,3 +162,4 @@ export const webfetchTool = () =>
       }
     },
   });
+};

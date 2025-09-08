@@ -73,6 +73,7 @@ app.get("/", (c) => {
 // biome-ignore lint/performance/noBarrelFile: <we need it>
 export { Sandbox } from "@cloudflare/sandbox";
 export type { CustomUIMessage, CustomUITools } from "./ai/tool";
+export type { TodoInfo } from "./ai/tools/todo";
 export { ChatManager } from "./chat-manager";
 export type { AppRouter } from "./routers";
 

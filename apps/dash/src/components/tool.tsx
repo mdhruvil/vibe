@@ -1,13 +1,7 @@
 "use client";
 
 import type { ToolUIPart } from "ai";
-import {
-  CheckCircleIcon,
-  ChevronDownIcon,
-  CircleIcon,
-  LoaderIcon,
-  XCircleIcon,
-} from "lucide-react";
+import { CheckCircleIcon, LoaderIcon, XCircleIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { Streamdown } from "streamdown";
 import {
@@ -28,13 +22,12 @@ export const Tool = ({ className, ...props }: ToolProps) => (
 );
 
 export type ToolHeaderProps = {
-  type: ToolUIPart["type"];
   text: string;
   state: ToolUIPart["state"];
   className?: string;
 };
 
-const getStatusIcon = (status: ToolUIPart["state"]) => {
+export const getStatusIcon = (status: ToolUIPart["state"]) => {
   // const labels = {
   //   "input-streaming": "Pending",
   //   "input-available": "Running",
@@ -43,7 +36,7 @@ const getStatusIcon = (status: ToolUIPart["state"]) => {
   // } as const;
 
   const icons = {
-    "input-streaming": <CircleIcon className="size-3 shrink-0" />,
+    "input-streaming": <LoaderIcon className="size-3 shrink-0 animate-spin" />,
     "input-available": <LoaderIcon className="size-3 shrink-0 animate-spin" />,
     "output-available": (
       <CheckCircleIcon className="size-3 shrink-0 text-green-600" />
@@ -56,7 +49,6 @@ const getStatusIcon = (status: ToolUIPart["state"]) => {
 
 export const ToolHeader = ({
   className,
-  type,
   text,
   state,
   ...props
@@ -71,7 +63,6 @@ export const ToolHeader = ({
         <Streamdown>{text}</Streamdown>
       </span>
     </div>
-    <ChevronDownIcon className="size-3 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
   </CollapsibleTrigger>
 );
 

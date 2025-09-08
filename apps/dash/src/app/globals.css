@@ -4,6 +4,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+code {
+  font-family: var(--font-jetbrains-mono);
+}
+
 :root {
   --background: oklch(0.9754 0.0084 325.6414);
   --foreground: oklch(0.3257 0.1161 325.0372);

@@ -101,8 +101,10 @@ export class AI {
           (msg) => msg.id !== responseMessage.id
         );
         const messagesToStore = messagesWithoutNewOne.concat(responseMessage);
-
-        await this.manager.putToStore(keys.MESSAGES, messagesToStore);
+        await this.manager.putToStore(
+          keys.MESSAGES,
+          JSON.stringify(messagesToStore)
+        );
       },
     });
   }

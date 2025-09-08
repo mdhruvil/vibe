@@ -5,6 +5,7 @@ import type { CustomUIMessage } from "@vibe/server";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { AppMessagePart } from "@/components/app-message-part";
 import {
   Conversation,
   ConversationContent,
@@ -16,8 +17,6 @@ import {
   PromptInputSubmit,
   PromptInputTextarea,
 } from "@/components/prompt-input";
-import { Response } from "@/components/response";
-import { Tool, ToolContent, ToolHeader, ToolInput } from "@/components/tool";
 import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
 import { ChatError } from "@/lib/errors";
@@ -48,8 +47,8 @@ export function Chat({
       }
       console.log({ error });
     },
-    onFinish: (data) => {
-      console.log(data);
+    onToolCall: ({ toolCall }) => {
+      console.log({ toolCall });
     },
   });
 
@@ -86,37 +85,9 @@ export function Chat({
           <Message from={message.role} key={message.id}>
             <MessageContent>
               {message.parts.map((part, i) => {
-                switch (part.type) {
-                  case "text": // we don't use any reasoning or tool calls in this example
-                    return (
-                      <Response key={`${message.id}-${i}`}>
-                        {part.text}
-                      </Response>
-                    );
-                  case "tool-bash":
-                  case "tool-read":
-                  case "tool-webfetch":
-                  case "tool-edit":
-                  case "tool-todoread":
-                  case "tool-todowrite": {
-                    const header = part.type;
-                    return (
-                      <Tool defaultOpen={false} key={`${message.id}-${i}`}>
-                        <ToolHeader
-                          state={part.state}
-                          text={header}
-                          type={part.type}
-                        />
-                        <ToolContent>
-                          <ToolInput input={part.input} />
-                        </ToolContent>
-                      </Tool>
-                    );
-                  }
-
-                  default:
-                    return null;
-                }
+                return (
+                  <AppMessagePart key={`${message.id}-${i}`} part={part} />
+                );
               })}
             </MessageContent>
           </Message>

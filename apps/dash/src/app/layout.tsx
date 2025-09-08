@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, Rubik } from "next/font/google";
+import { JetBrains_Mono, Rubik } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import Providers from "./providers";
@@ -9,8 +9,8 @@ const rubik = Rubik({
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetBrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
 });
 
@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         // Yea NO LIGHT MODE
-        className={`${rubik.className} ${rubik.variable} ${geistMono.variable} dark antialiased`}
+        className={`${rubik.className} ${rubik.variable} ${jetBrainsMono.variable} dark antialiased`}
       >
         <Providers>{children}</Providers>
         <Toaster />

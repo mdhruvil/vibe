@@ -43,7 +43,7 @@ export class ChatManager extends DurableObject<Env> {
   private _devServerReadyPromise: Promise<void> | undefined;
 
   // Idle teardown alarm TTL (object/sandbox can hibernate after this inactivity).
-  private static readonly ALARM_TTL_MS = 1000 * 60 * 1;
+  private static readonly ALARM_TTL_MS = 1000 * 60 * 10;
 
   constructor(state: DurableObjectState, env: Env) {
     super(state, env);
@@ -71,12 +71,12 @@ export class ChatManager extends DurableObject<Env> {
     return this._session;
   }
 
-  getFromStore<T>(key: string): Promise<T | undefined> {
-    return this.ctx.storage.get<T>(key);
+  async getFromStore<T>(key: string): Promise<T | undefined> {
+    return await this.ctx.storage.get<T>(key);
   }
 
-  putToStore<T>(key: string, value: T): Promise<void> {
-    return this.ctx.storage.put(key, value);
+  async putToStore<T>(key: string, value: T): Promise<void> {
+    return await this.ctx.storage.put(key, value);
   }
 
   /**
@@ -228,9 +228,8 @@ export class ChatManager extends DurableObject<Env> {
   }
 
   async getMessages(): Promise<CustomUIMessage[]> {
-    const messages =
-      (await this.getFromStore<CustomUIMessage[]>(keys.MESSAGES)) ?? [];
-    return messages;
+    const messages = (await this.getFromStore<string>(keys.MESSAGES)) ?? "[]";
+    return JSON.parse(messages) ?? [];
   }
 
   /** Public method to obtain preview URL after ensuring readiness. */

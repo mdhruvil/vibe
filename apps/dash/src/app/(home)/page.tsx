@@ -2,7 +2,7 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   PromptInput,
@@ -17,6 +17,7 @@ export default function Page() {
   const router = useRouter();
   const [input, setInput] = useState("");
   const { data: sessionData } = useSession();
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const createChatMutation = useMutation(
     trpc.createChat.mutationOptions({
       onSuccess(data, variables, context) {
@@ -41,6 +42,17 @@ export default function Page() {
     });
   }
 
+  useEffect(() => {
+    const prompt = localStorage.getItem(PROMPT_STORAGE_KEY) ?? "";
+    setInput(prompt);
+
+    if (inputRef.current) {
+      const length = prompt.length;
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(length, length);
+    }
+  }, []);
+
   return (
     <div className="flex h-svh w-full items-center justify-center gap-4">
       <PromptInput
@@ -54,17 +66,7 @@ export default function Page() {
             localStorage.setItem(PROMPT_STORAGE_KEY, e.currentTarget.value);
           }}
           placeholder="Ask Vibe to build..."
-          ref={(el) => {
-            // instead of using useEffect we are using ref callback to put cursor at the end of the text
-            if (!el) {
-              return;
-            }
-            setInput(localStorage.getItem(PROMPT_STORAGE_KEY) ?? "");
-
-            const length = el.value.length;
-            el.focus();
-            el.setSelectionRange(length, length);
-          }}
+          ref={inputRef}
           value={input}
         />
         <PromptInputSubmit

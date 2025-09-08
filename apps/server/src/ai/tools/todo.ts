@@ -7,17 +7,17 @@ import type { VibeContext } from "../tool";
 const TodoInfo = z.object({
   content: z.string().describe("Brief description of the task"),
   status: z
-    .string()
+    .enum(["pending", "in_progress", "completed", "cancelled"])
     .describe(
       "Current status of the task: pending, in_progress, completed, cancelled"
     ),
   priority: z
-    .string()
+    .enum(["high", "medium", "low"])
     .describe("Priority level of the task: high, medium, low"),
   id: z.string().describe("Unique identifier for the todo item"),
 });
 
-type TodoInfo = z.infer<typeof TodoInfo>;
+export type TodoInfo = z.infer<typeof TodoInfo>;
 
 const TODO_READ_DESCRIPTION = stripIndents(`
 Use this tool to read the current to-do list for the session. This tool should be used proactively and frequently to ensure that you are aware of the status of the current task list. You should make use of this tool as often as possible, especially in the following situations:
@@ -45,15 +45,10 @@ export function todoRead(ctx: VibeContext) {
     }),
     execute: async () => {
       const data = (await ctx.manager.getFromStore(keys.TODOS)) ?? [];
-      const todos = z.array(TodoInfo).safeParse(data);
-      if (!todos.success) {
-        console.error(todos.error);
-        return {
-          todos: [],
-        };
-      }
+      const todos = z.array(TodoInfo).parse(data);
+
       return {
-        todos: todos.data,
+        todos,
       };
     },
   });
@@ -192,7 +187,7 @@ export function todoWrite(ctx: VibeContext) {
     execute: async (data) => {
       const { todos } = data;
       await ctx.manager.putToStore(keys.TODOS, todos);
-      const updatedData = ctx.manager.getFromStore(keys.TODOS) || [];
+      const updatedData = (await ctx.manager.getFromStore(keys.TODOS)) || [];
       return { todos: updatedData as unknown as TodoInfo[] };
     },
   });
