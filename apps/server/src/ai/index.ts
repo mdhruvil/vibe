@@ -1,3 +1,5 @@
+import { env } from "cloudflare:workers";
+import { createAzure } from "@ai-sdk/azure";
 import { google } from "@ai-sdk/google";
 import {
   convertToModelMessages,
@@ -7,11 +9,11 @@ import {
   streamText,
 } from "ai";
 import z from "zod";
+import { CODEX_PROMPT, TITLE_PROMPT } from "@/ai/prompt";
 import type { ChatManager } from "@/chat-manager";
 import { auth } from "@/lib/auth";
 import { keys } from "@/lib/constants";
 import { ChatError } from "@/lib/errors";
-import { SYSTEM_PROMPT, TITLE_PROMPT } from "@/lib/prompt";
 import { ALL_TOOL_FUNCS, type VibeContext, type VibeTool } from "./tool";
 
 const textPartSchema = z.object({
@@ -64,19 +66,27 @@ export class AI {
 
     const context: VibeContext = {
       session: this.manager.session,
+      manager: this.manager,
     };
 
     const tools: Record<string, ReturnType<VibeTool>> = {};
     for (const [name, t] of Object.entries(ALL_TOOL_FUNCS)) {
       tools[name] = t(context);
     }
+    const azure = createAzure({
+      resourceName: env.AZURE_RESOURCE_NAME,
+      apiKey: env.AZURE_API_KEY,
+    });
 
     const result = streamText({
-      model: google("gemini-2.5-flash"),
-      system: SYSTEM_PROMPT,
+      model: azure("gpt-4.1"),
+      system: CODEX_PROMPT,
       messages: convertToModelMessages(allMessages),
       stopWhen: stepCountIs(50),
       tools,
+      onStepFinish: async () => {
+        await this.manager.resetAlarm();
+      },
     });
 
     return result.toUIMessageStreamResponse({
@@ -85,6 +95,7 @@ export class AI {
         prefix: "msg",
         size: 16,
       }),
+
       onFinish: async ({ messages, responseMessage }) => {
         const messagesWithoutNewOne = messages.filter(
           (msg) => msg.id !== responseMessage.id

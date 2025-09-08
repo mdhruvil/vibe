@@ -168,9 +168,15 @@ importers:
 
   apps/server:
     dependencies:
+      '@ai-sdk/azure':
+        specifier: ^2.0.26
+        version: 2.0.26(zod@4.1.5)
       '@ai-sdk/google':
         specifier: ^2.0.3
         version: 2.0.11(zod@4.1.5)
+      '@ai-sdk/openai':
+        specifier: ^2.0.26
+        version: 2.0.26(zod@4.1.5)
       '@cloudflare/sandbox':
         specifier: ^0.3.1
         version: 0.3.1
@@ -192,6 +198,9 @@ importers:
       better-auth:
         specifier: ^1.3.7
         version: 1.3.7(react-dom@19.1.1(react@19.1.1))(react@19.1.1)(zod@4.1.5)
+      diff:
+        specifier: ^8.0.2
+        version: 8.0.2
       dotenv:
         specifier: ^17.2.1
         version: 17.2.1
@@ -323,6 +332,12 @@ importers:
 
 packages:
 
+  '@ai-sdk/azure@2.0.26':
+    resolution: {integrity: sha512-fgKDIMw7lxIlecC/3bDORb4DfWIMH35yCspmFTFfLXw11v2uQ6uwUbFdlrMrMiAJ5/6ZcbGGgPJVwux26H9/gg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4
+
   '@ai-sdk/gateway@1.0.15':
     resolution: {integrity: sha512-xySXoQ29+KbGuGfmDnABx+O6vc7Gj7qugmj1kGpn0rW0rQNn6UKUuvscKMzWyv1Uv05GyC1vqHq8ZhEOLfXscQ==}
     engines: {node: '>=18'}
@@ -331,6 +346,12 @@ packages:
 
   '@ai-sdk/google@2.0.11':
     resolution: {integrity: sha512-dnVIgSz1DZD/0gVau6ifYN3HZFN15HZwC9VjevTFfvrfSfbEvpXj5x/k/zk/0XuQrlQ5g8JiwJtxc9bx24x2xw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4
+
+  '@ai-sdk/openai@2.0.26':
+    resolution: {integrity: sha512-SVe6Ufe5LbvE9XeDvTwAluwHWugzVPcmQ+89OgM6CvIQLztg8JglKzgA6QtY0cCSdy2xHE/t7LaQbQsDT4yQmw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.25.76 || ^4
@@ -5120,6 +5141,13 @@ packages:
 
 snapshots:
 
+  '@ai-sdk/azure@2.0.26(zod@4.1.5)':
+    dependencies:
+      '@ai-sdk/openai': 2.0.26(zod@4.1.5)
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.8(zod@4.1.5)
+      zod: 4.1.5
+
   '@ai-sdk/gateway@1.0.15(zod@4.1.5)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
@@ -5130,6 +5158,12 @@ snapshots:
     dependencies:
       '@ai-sdk/provider': 2.0.0
       '@ai-sdk/provider-utils': 3.0.7(zod@4.1.5)
+      zod: 4.1.5
+
+  '@ai-sdk/openai@2.0.26(zod@4.1.5)':
+    dependencies:
+      '@ai-sdk/provider': 2.0.0
+      '@ai-sdk/provider-utils': 3.0.8(zod@4.1.5)
       zod: 4.1.5
 
   '@ai-sdk/provider-utils@3.0.7(zod@4.1.5)':

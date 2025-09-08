@@ -95,7 +95,10 @@ export function Chat({
                     );
                   case "tool-bash":
                   case "tool-read":
-                  case "tool-webfetch": {
+                  case "tool-webfetch":
+                  case "tool-edit":
+                  case "tool-todoread":
+                  case "tool-todowrite": {
                     const header = part.type;
                     return (
                       <Tool defaultOpen={false} key={`${message.id}-${i}`}>

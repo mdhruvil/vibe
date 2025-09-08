@@ -1,11 +1,15 @@
 import type { ExecutionSession } from "@cloudflare/sandbox";
 import type { InferUITools, Tool, UIDataTypes, UIMessage } from "ai";
+import type { ChatManager } from "@/chat-manager";
 import { bashTool } from "./tools/bash";
+import { editTool } from "./tools/edit";
 import { readTool } from "./tools/read";
+import { todoRead, todoWrite } from "./tools/todo";
 import { webfetchTool } from "./tools/webfetch";
 
 export type VibeContext = {
   session: ExecutionSession;
+  manager: ChatManager;
 };
 
 export type VibeTool = (ctx: VibeContext) => Tool;
@@ -18,6 +22,9 @@ export const ALL_TOOL_FUNCS = {
   bash: bashTool,
   read: readTool,
   webfetch: webfetchTool,
+  edit: editTool,
+  todoread: todoRead,
+  todowrite: todoWrite,
 } as const;
 
 type Tools = {

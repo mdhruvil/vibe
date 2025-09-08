@@ -3,4 +3,5 @@ export const keys = {
   MESSAGES: "messages",
   DEV_SERVER_ID: "dev_server_id",
   DEV_SERVER_URL: "dev_server_url",
+  TODOS: "todos",
 } as const;
