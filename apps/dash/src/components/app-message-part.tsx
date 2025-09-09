@@ -60,7 +60,7 @@ export function AppMessagePart({ part }: Props) {
     return <TodoTool todos={part.output?.todos ?? []} />;
   }
 
-  if (!part.type.startsWith("tool-")) {
+  if (!part.type.startsWith("tool-") || part.type === "tool-todoread") {
     return null;
   }
 

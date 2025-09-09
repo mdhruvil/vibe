@@ -9,7 +9,7 @@ import {
   streamText,
 } from "ai";
 import z from "zod";
-import { CODEX_PROMPT, TITLE_PROMPT } from "@/ai/prompt";
+import { CODEX_PROMPT, GPT5_PROMPT, TITLE_PROMPT } from "@/ai/prompt";
 import type { ChatManager } from "@/chat-manager";
 import { auth } from "@/lib/auth";
 import { keys } from "@/lib/constants";
@@ -79,8 +79,8 @@ export class AI {
     });
 
     const result = streamText({
-      model: azure("gpt-4.1"),
-      system: CODEX_PROMPT,
+      model: azure("gpt-5-mini"),
+      system: GPT5_PROMPT,
       messages: convertToModelMessages(allMessages),
       stopWhen: stepCountIs(50),
       tools,
