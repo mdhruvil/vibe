@@ -9,7 +9,7 @@ import {
   streamText,
 } from "ai";
 import z from "zod";
-import { CODEX_PROMPT, GPT5_PROMPT, TITLE_PROMPT } from "@/ai/prompt";
+import { GPT5_PROMPT, TITLE_PROMPT } from "@/ai/prompt";
 import type { ChatManager } from "@/chat-manager";
 import { auth } from "@/lib/auth";
 import { keys } from "@/lib/constants";
