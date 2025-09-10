@@ -31,7 +31,7 @@ export class ChatManager extends DurableObject<Env> {
   private _sandboxReadyPromise: Promise<void> | undefined;
   private _devServerReadyPromise: Promise<void> | undefined;
 
-  private static readonly ALARM_TTL_MS = 1000 * 60 * 1; // 10m
+  private static readonly ALARM_TTL_MS = 1000 * 60 * 10; // 10m
   private static readonly LOG_MAX_BYTES = 1024 * 1024; // 1MB cap
 
   private readonly sessions: Map<WebSocket, { [key: string]: string }>;
@@ -419,5 +419,44 @@ export class ChatManager extends DurableObject<Env> {
     } finally {
       this._session = undefined;
     }
+  }
+
+  async connectToAppwriteProject({
+    region,
+    projectId,
+    apiKey,
+  }: {
+    region: string;
+    projectId: string;
+    apiKey: string;
+  }) {
+    try {
+      await this.putToStore(keys.APPWRITE_REGION, region);
+      await this.putToStore(keys.APPWRITE_PROJECT_ID, projectId);
+      await this.putToStore(keys.APPWRITE_API_KEY, apiKey);
+    } catch (error) {
+      console.error("[CHAT_MANAGER] Failed to connect to Appwrite", error);
+      return false;
+    }
+    return true;
+  }
+
+  async disconnectFromAppwrite() {
+    try {
+      await this.ctx.storage.delete(keys.APPWRITE_REGION);
+      await this.ctx.storage.delete(keys.APPWRITE_PROJECT_ID);
+      await this.ctx.storage.delete(keys.APPWRITE_API_KEY);
+    } catch (error) {
+      console.error("[CHAT_MANAGER] Failed to disconnect from Appwrite", error);
+      return false;
+    }
+    return true;
+  }
+
+  async isConnectedToAppwrite() {
+    const region = await this.getFromStore<string>(keys.APPWRITE_REGION);
+    const projectId = await this.getFromStore<string>(keys.APPWRITE_PROJECT_ID);
+    const apiKey = await this.getFromStore<string>(keys.APPWRITE_API_KEY);
+    return !!(region && projectId && apiKey);
   }
 }

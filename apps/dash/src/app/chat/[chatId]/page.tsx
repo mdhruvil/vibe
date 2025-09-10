@@ -5,6 +5,8 @@ import { LoaderIcon, PlugZapIcon, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { use } from "react";
 import { ReadyState } from "react-use-websocket";
+import { ConnectAppwriteDialog } from "@/components/connect-appwrite-dialog";
+import { DisconnectAppwriteProject } from "@/components/disconnect-appwrite-project";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +59,22 @@ export default function Page({
     return <Chat chatId={chatId} initialMessages={data?.messages} />;
   }
 
+  function renderAppwriteButton() {
+    if (isLoading) {
+      return (
+        <Button disabled loading variant="secondary">
+          Checking...
+        </Button>
+      );
+    }
+
+    if (!data?.isConnectedToAppwrite) {
+      return <ConnectAppwriteDialog chatId={chatId} />;
+    }
+
+    return <DisconnectAppwriteProject chatId={chatId} />;
+  }
+
   return (
     <div className="flex h-screen flex-col">
       <nav className="flex shrink-0 items-center justify-between border-b p-2">
@@ -71,8 +89,9 @@ export default function Page({
             <span>{connectionLabel}</span>
           </div>
         </div>
-        <div>
-          <Button size="sm">Publish</Button>
+        <div className="flex gap-3">
+          {renderAppwriteButton()}
+          <Button>Publish</Button>
         </div>
       </nav>
       <section className="flex min-h-0 flex-1">

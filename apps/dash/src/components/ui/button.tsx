@@ -51,7 +51,10 @@ function Button({
 
   return (
     <Comp
-      className={cn(buttonVariants({ variant, size, className }), "relative")}
+      className={cn(
+        buttonVariants({ variant, size, className }),
+        "relative cursor-pointer"
+      )}
       disabled={loading || props.disabled}
       {...props}
     >
