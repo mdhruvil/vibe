@@ -44,6 +44,9 @@
       "complexity": {
         "useSimplifiedLogicExpression": "off",
         "noExcessiveCognitiveComplexity": "off"
+      },
+      "correctness": {
+        "noUndeclaredVariables": "off"
       }
     }
   },

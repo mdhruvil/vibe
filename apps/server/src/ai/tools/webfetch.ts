@@ -36,7 +36,6 @@ async function convertHtmlToMarkdown(content: string, filename: string) {
 async function extractTextFromHTML(html: string): Promise<string> {
   let text = "";
   let skipContent = false;
-  // biome-ignore lint/correctness/noUndeclaredVariables: <htmlwriter exist in workerd>
   const rewriter = new HTMLRewriter()
     .on("script, style, noscript, iframe, object, embed", {
       element() {

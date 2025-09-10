@@ -56,6 +56,16 @@ app.post("/api/chat/:chatId", async (c) => {
   return chatManager.fetch(c.req.raw);
 });
 
+app.get("/api/chat/:chatId/ws", async (c) => {
+  const chatId = c.req.param("chatId");
+  const upgrade = c.req.header("Upgrade");
+  if (!upgrade || upgrade.toLowerCase() !== "websocket") {
+    return c.text("Expected Upgrade: websocket", 426);
+  }
+  const chatManager = await getChatManager(env as Cloudflare.Env, chatId);
+  return chatManager.fetch(c.req.raw);
+});
+
 app.use(
   "/trpc/*",
   trpcServer({
