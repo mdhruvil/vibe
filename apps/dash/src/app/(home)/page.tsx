@@ -33,13 +33,14 @@ export default function Page() {
     e.preventDefault();
     if (!sessionData?.user) {
       router.push("/auth");
+      return;
     }
-    if (!input.trim()) {
-      return toast.error("Prompt can't be empty");
+    const trimmed = input.trim();
+    if (!trimmed) {
+      toast.error("Prompt can't be empty");
+      return;
     }
-    createChatMutation.mutate({
-      prompt: input,
-    });
+    createChatMutation.mutate({ prompt: trimmed });
   }
 
   useEffect(() => {

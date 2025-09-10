@@ -30,12 +30,13 @@ export default function MainPromptInput() {
     e.preventDefault();
     if (!sessionData?.user) {
       router.push("/auth");
+      return;
     }
     if (!input.trim()) {
       return toast.error("Prompt can't be empty");
     }
     createChatMutation.mutate({
-      prompt: input,
+      prompt: input.trim(),
     });
   }
   return (

@@ -1,6 +1,6 @@
 Vibe
 
-Vibe is a vibecoding tool that lets user vibecode app and directly deploy to thier appwrite account.
+Vibe is a vibecoding tool that lets users vibecode apps and deploy directly to their Appwrite account.
 
 Tech Stack
 
