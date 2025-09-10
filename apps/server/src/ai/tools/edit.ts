@@ -3,6 +3,8 @@
  * thanks dax! very cool!
  * https://github.com/sst/opencode/blob/dev/packages/opencode/src/tool/edit.ts
  */
+
+import type { ExecutionSession } from "@cloudflare/sandbox";
 import { tool } from "ai";
 import { createTwoFilesPatch } from "diff";
 import z from "zod";
@@ -371,7 +373,7 @@ const EscapeNormalizedReplacer: Replacer = function* (content, find) {
   }
 };
 
-function replace(
+export function replace(
   content: string,
   oldString: string,
   newString: string,
@@ -417,12 +419,12 @@ function replace(
   );
 }
 
-async function fileExists(
-  ctx: VibeContext,
+export async function fileExists(
+  session: ExecutionSession,
   filePath: string
 ): Promise<boolean> {
   const esc = shellEscape(filePath);
-  const proc = await ctx.session.exec(
+  const proc = await session.exec(
     `[ -f ${esc} ] && echo __OK__ || echo __NO__`
   );
   return proc.stdout.includes("__OK__");
@@ -516,7 +518,7 @@ export const editTool = (ctx: VibeContext) =>
         };
       }
 
-      const exists = await fileExists(ctx, filePath);
+      const exists = await fileExists(ctx.session, filePath);
       if (!exists) throw new Error(`File not found: ${filePath}`);
 
       const file = await ctx.session.readFile(filePath);

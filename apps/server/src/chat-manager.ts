@@ -9,6 +9,7 @@ import {
 import type { CustomUIMessage } from ".";
 import { AI } from "./ai";
 import { keys } from "./lib/constants";
+import { replayMessages } from "./replay-messages";
 import type { WSEvent } from "./types/ws";
 
 /**
@@ -132,6 +133,10 @@ export class ChatManager extends DurableObject<Env> {
         console.log(
           `[CHAT_MANAGER] Sandbox session created (exit ${echo.exitCode})`
         );
+        console.log("[CHAT_MANAGER] Replaying messages...");
+        const messages = await this.getMessages();
+        await replayMessages(messages, this.session);
+        console.log("[CHAT_MANAGER] Messages replayed");
         this.sendWebSocketMessage({
           type: "sb:status",
           data: { status: "started" },
