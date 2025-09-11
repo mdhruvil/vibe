@@ -1,7 +1,6 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import type { CustomUIMessage } from "@vibe/server";
 import { type ChatStatus, DefaultChatTransport } from "ai";
 import { LoaderIcon } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -24,6 +23,7 @@ import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
 import { ChatError } from "@/lib/errors";
 import { fetchWithErrorHandlers } from "@/lib/utils";
+import type { CustomUIMessage } from "../../../../../server/src";
 
 const statusMap: Record<ChatStatus, string> = {
   ready: "Ready to chat",

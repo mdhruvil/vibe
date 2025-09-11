@@ -1,8 +1,8 @@
 import { createTRPCClient, httpBatchStreamLink } from "@trpc/client";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
-import type { AppRouter } from "@vibe/server";
 import SuperJSON from "superjson";
 import { env } from "@/env";
+import type { AppRouter } from "../../../server/src";
 import { getQueryClient } from "./get-query-client";
 
 export const trpcClient = createTRPCClient<AppRouter>({

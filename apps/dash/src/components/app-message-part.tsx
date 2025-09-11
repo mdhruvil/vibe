@@ -1,4 +1,3 @@
-import type { CustomUIMessage, TodoInfo } from "@vibe/server";
 import {
   CircleCheck,
   CircleDashedIcon,
@@ -6,6 +5,7 @@ import {
   CirclePlusIcon,
 } from "lucide-react";
 import { Streamdown } from "streamdown";
+import type { CustomUIMessage, TodoInfo } from "../../../server/src";
 import { Response } from "./response";
 import { getStatusIcon } from "./tool";
 import {
