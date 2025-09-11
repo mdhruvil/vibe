@@ -3,6 +3,9 @@ import { env } from "@/env";
 
 export const authClient = createAuthClient({
   baseURL: env.NEXT_PUBLIC_API_URL,
+  fetchOptions: {
+    credentials: "include",
+  },
 });
 
 export const { useSession } = authClient;

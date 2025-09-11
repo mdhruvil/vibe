@@ -30,7 +30,6 @@ export const auth = betterAuth({
       sameSite: "none",
       secure: true,
       httpOnly: true,
-      domain: env.CORS_ORIGIN,
     },
   },
 });
