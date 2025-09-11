@@ -3,6 +3,7 @@ import {
   LoaderIcon,
   SquareArrowOutUpRightIcon,
   TriangleAlert,
+  TriangleAlertIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -63,6 +64,9 @@ export function Preview({ chatId }: { chatId: string }) {
   return (
     <WebPreview defaultUrl={previewUrl}>
       <WebPreviewNavigation>
+        <WebPreviewNavigationButton tooltip="This is a preview URL, preview will be unavailable after 10 minutes of inactivity. We recommend you to deploy to Appwrite Sites for better performance.">
+          <TriangleAlertIcon className="text-yellow-600" />
+        </WebPreviewNavigationButton>
         <WebPreviewUrl
           onChange={() => {
             // noop

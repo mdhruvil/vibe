@@ -9,6 +9,12 @@
     // Add public environment variables here
     // Example: "CORS_ORIGIN": "https://your-domain.com"
   },
+  "routes": [
+    {
+      "zone_name": "mdhruvil.page",
+      "pattern": "*.mdhruvil.page/*"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
