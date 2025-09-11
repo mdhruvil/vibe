@@ -8,6 +8,7 @@ import {
 } from "@cloudflare/sandbox";
 import type { CustomUIMessage } from ".";
 import { AI } from "./ai";
+import { ensureSite } from "./lib/appwrite";
 import { keys } from "./lib/constants";
 import { replayMessages } from "./replay-messages";
 import type { WSEvent } from "./types/ws";
@@ -434,8 +435,20 @@ export class ChatManager extends DurableObject<Env> {
       await this.putToStore(keys.APPWRITE_REGION, region);
       await this.putToStore(keys.APPWRITE_PROJECT_ID, projectId);
       await this.putToStore(keys.APPWRITE_API_KEY, apiKey);
+      const chatId = await this.ensureChatId();
+      const site = await ensureSite({
+        region,
+        appwriteProjectId: projectId,
+        apiKey,
+        siteId: chatId,
+      });
+      if (!site) {
+        console.log("[CHAT_MANAGER] Failed to ensure Appwrite site ", site);
+        return false;
+      }
+      console.log("[CHAT_MANAGER] Successfully ensured Appwrite site ", site);
     } catch (error) {
-      console.error("[CHAT_MANAGER] Failed to connect to Appwrite", error);
+      console.log("[CHAT_MANAGER] Failed to connect to Appwrite", error);
       return false;
     }
     return true;
@@ -458,5 +471,49 @@ export class ChatManager extends DurableObject<Env> {
     const projectId = await this.getFromStore<string>(keys.APPWRITE_PROJECT_ID);
     const apiKey = await this.getFromStore<string>(keys.APPWRITE_API_KEY);
     return !!(region && projectId && apiKey);
+  }
+
+  async createNewAppwriteDeployment() {
+    const region = await this.getFromStore<string>(keys.APPWRITE_REGION);
+    const projectId = await this.getFromStore<string>(keys.APPWRITE_PROJECT_ID);
+    const apiKey = await this.getFromStore<string>(keys.APPWRITE_API_KEY);
+    if (!(region && projectId && apiKey)) {
+      throw new Error("Missing Appwrite configuration");
+    }
+    const chatId = await this.ensureChatId();
+    await this.ensureSandboxReady();
+    await this.ensureDevServerRunning();
+    await this.resetAlarm();
+
+    const publisherSession = await this.sandbox.createSession({
+      cwd: "/publisher",
+      env: {
+        APPWRITE_REGION: region,
+        APPWRITE_PROJECT_ID: projectId,
+        APPWRITE_API_KEY: apiKey,
+        APPWRITE_SITE_ID: chatId,
+      },
+    });
+    const process = await publisherSession.exec("bun run publisher.ts");
+    const deploymentRegex = /====>deploymentId:([a-f0-9]+)====>/;
+    const deploymentId = process.stdout.match(deploymentRegex)?.[1];
+    if (!deploymentId) {
+      throw new Error("Failed to extract deploymentId");
+    }
+    await this.putToStore(keys.APPWRITE_LATEST_DEPLOYMENT, deploymentId);
+
+    console.log(`[CHAT_MANAGER] Created Appwrite deployment ${deploymentId}`);
+  }
+
+  async getDeploymentConsoleUrl() {
+    const region = await this.getFromStore<string>(keys.APPWRITE_REGION);
+    const projectId = await this.getFromStore<string>(keys.APPWRITE_PROJECT_ID);
+    const deploymentId = await this.getFromStore<string>(
+      keys.APPWRITE_LATEST_DEPLOYMENT
+    );
+    const chatId = await this.ensureChatId();
+    // https://cloud.appwrite.io/console/project-fra-68b40233003c4547f9dc/sites/site-292fb07a-28ca-4e09-9b9a-78ae3a37335e/deployments/deployment-68c2793eec43f4f4e467
+    const url = `https://cloud.appwrite.io/console/project-${region}-${projectId}/sites/site-${chatId}/deployments/deployment-${deploymentId}`;
+    return { url, deploymentId };
   }
 }

@@ -133,5 +133,50 @@ export const appRouter = router({
       const success = await chatManager.disconnectFromAppwrite();
       return { success };
     }),
+
+  deployAppwriteProject: protectedProcedure
+    .input(
+      z.object({
+        chatId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const chatRecord = await db.query.chat.findFirst({
+        where: ({ id, created_by }, { eq, and }) =>
+          and(eq(id, input.chatId), eq(created_by, ctx.session.user.id)),
+      });
+      if (!chatRecord) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Chat not found",
+        });
+      }
+
+      const chatManager = await getChatManager(env, chatRecord.id);
+      await chatManager.createNewAppwriteDeployment();
+      return { success: true };
+    }),
+
+  getLatestDeployment: protectedProcedure
+    .input(z.object({ chatId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const chatRecord = await db.query.chat.findFirst({
+        where: ({ id, created_by }, { eq, and }) =>
+          and(eq(id, input.chatId), eq(created_by, ctx.session.user.id)),
+      });
+      if (!chatRecord) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Chat not found",
+        });
+      }
+
+      const chatManager = await getChatManager(env, chatRecord.id);
+      const latestDeployment = await chatManager.getDeploymentConsoleUrl();
+      return {
+        consoleUrl: latestDeployment.url,
+        deploymentId: latestDeployment.deploymentId,
+      };
+    }),
 });
 export type AppRouter = typeof appRouter;

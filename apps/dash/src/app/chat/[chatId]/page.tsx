@@ -8,6 +8,7 @@ import { ReadyState } from "react-use-websocket";
 import { ConnectAppwriteDialog } from "@/components/connect-appwrite-dialog";
 import { DisconnectAppwriteProject } from "@/components/disconnect-appwrite-project";
 import { Logo } from "@/components/logo";
+import { PublishButton } from "@/components/publish-button";
 import { Button } from "@/components/ui/button";
 import {
   ResizableHandle,
@@ -75,6 +76,22 @@ export default function Page({
     return <DisconnectAppwriteProject chatId={chatId} />;
   }
 
+  function renderPublishButton() {
+    if (isLoading) {
+      return (
+        <Button disabled loading>
+          Checking...
+        </Button>
+      );
+    }
+
+    if (!data?.isConnectedToAppwrite) {
+      return <Button disabled>Publish</Button>;
+    }
+
+    return <PublishButton chatId={chatId} />;
+  }
+
   return (
     <div className="flex h-screen flex-col">
       <nav className="flex shrink-0 items-center justify-between border-b p-2">
@@ -91,7 +108,7 @@ export default function Page({
         </div>
         <div className="flex gap-3">
           {renderAppwriteButton()}
-          <Button>Publish</Button>
+          {renderPublishButton()}
         </div>
       </nav>
       <section className="flex min-h-0 flex-1">

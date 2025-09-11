@@ -170,7 +170,11 @@ export function ConnectAppwriteDialog({ chatId }: Props) {
                 <FormItem>
                   <FormLabel>API Key</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter your API key" {...field} />
+                    <Input
+                      placeholder="Enter your API key"
+                      {...field}
+                      type="password"
+                    />
                   </FormControl>
                   <FormDescription>Your Appwrite API key.</FormDescription>
                   <FormMessage />

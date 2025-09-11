@@ -8,4 +8,5 @@ export const keys = {
   APPWRITE_REGION: "appwrite_region",
   APPWRITE_PROJECT_ID: "appwrite_project_id",
   APPWRITE_API_KEY: "appwrite_api_key",
+  APPWRITE_LATEST_DEPLOYMENT: "appwrite_latest_deployment",
 } as const;
