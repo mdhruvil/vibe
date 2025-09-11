@@ -1,4 +1,4 @@
-FROM docker.io/cloudflare/sandbox:0.3.1
+FROM ghcr.io/mdhruvil/sandbox:0.3.1
 
 WORKDIR /workspace
 
