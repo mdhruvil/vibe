@@ -14,6 +14,7 @@ import type { ChatManager } from "@/chat-manager";
 import { auth } from "@/lib/auth";
 import { keys } from "@/lib/constants";
 import { ChatError } from "@/lib/errors";
+import { EXCLUDED_FROM_RATE_LIMIT } from "../lib/constants";
 import { ALL_TOOL_FUNCS, type VibeContext, type VibeTool } from "./tool";
 
 const textPartSchema = z.object({
@@ -38,6 +39,8 @@ export const postRequestBodySchema = z.object({
   }),
 });
 
+export const MESSAGE_LIMIT = 3;
+
 export type PostRequestBody = z.infer<typeof postRequestBodySchema>;
 
 export class AI {
@@ -59,6 +62,17 @@ export class AI {
     if (!session?.user) {
       return new ChatError("unauthorized:chat").toResponse();
     }
+
+    const messageCount =
+      (await this.manager.getFromStore<number>(keys.MESSAGES_COUNT)) ?? 0;
+
+    if (
+      messageCount >= MESSAGE_LIMIT &&
+      !EXCLUDED_FROM_RATE_LIMIT.includes(session.user.email)
+    ) {
+      return new ChatError("rate_limit:chat").toResponse();
+    }
+    await this.manager.putToStore(keys.MESSAGES_COUNT, messageCount + 1);
 
     const message = data.message;
     const messagesFromStore = (await this.manager.getMessages()) ?? [];

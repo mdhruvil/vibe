@@ -99,6 +99,10 @@ export default function Page({
           <Link href="/">
             <Logo className="size-6" />
           </Link>
+          <div className="flex items-center gap-2 text-sm">
+            <p className="text-muted-foreground/60">/</p>
+            <p>{data?.title}</p>
+          </div>
           <div className="flex items-center gap-1 rounded bg-muted px-2 py-1 text-muted-foreground text-xs">
             <PlugZapIcon className="size-3" />
             <span className="capitalize">{status}</span>

@@ -1,13 +1,17 @@
 import { env } from "cloudflare:workers";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
 import z from "zod";
 import { generateTitle } from "@/ai";
 import { getChatManager } from "@/chat-manager";
 import { db } from "@/db";
 import { chat } from "@/db/schema/chat";
 import { checkValidity } from "@/lib/appwrite";
+import { EXCLUDED_FROM_RATE_LIMIT } from "@/lib/constants";
 import type { CustomUIMessage } from "..";
 import { protectedProcedure, publicProcedure, router } from "../lib/trpc";
+
+const CHAT_LIMIT = 3;
 
 export const appRouter = router({
   healthCheck: publicProcedure.query(() => {
@@ -21,6 +25,19 @@ export const appRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const totalChats = await db.$count(
+        chat,
+        eq(chat.created_by, ctx.session.user.id)
+      );
+      if (
+        totalChats >= CHAT_LIMIT &&
+        !EXCLUDED_FROM_RATE_LIMIT.includes(ctx.session.user.email)
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `Chat limit exceeded!! Only ${CHAT_LIMIT} chats are allowed.`,
+        });
+      }
       const title = await generateTitle(input.prompt);
       const [newChat] = await db
         .insert(chat)

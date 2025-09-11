@@ -24,6 +24,11 @@ export default function Page() {
         console.log({ data, variables, context });
         router.push(`/chat/${data.id}`);
       },
+      onError(error, variables, context) {
+        console.log("Error creating chat");
+        console.log({ error, variables, context });
+        toast.error(error.message || "Error creating chat");
+      },
     })
   );
   const isLoading =

@@ -2,7 +2,8 @@
 
 import { useChat } from "@ai-sdk/react";
 import type { CustomUIMessage } from "@vibe/server";
-import { DefaultChatTransport } from "ai";
+import { type ChatStatus, DefaultChatTransport } from "ai";
+import { LoaderIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppMessagePart } from "@/components/app-message-part";
@@ -16,11 +17,20 @@ import {
   PromptInput,
   PromptInputSubmit,
   PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
 } from "@/components/prompt-input";
 import { env } from "@/env";
 import { PROMPT_STORAGE_KEY } from "@/lib/consts";
 import { ChatError } from "@/lib/errors";
 import { fetchWithErrorHandlers } from "@/lib/utils";
+
+const statusMap: Record<ChatStatus, string> = {
+  ready: "Ready to chat",
+  streaming: "Working...",
+  submitted: "Working...",
+  error: "Error occurred",
+};
 
 export function Chat({
   initialMessages,
@@ -99,6 +109,16 @@ export function Chat({
           className="relative mx-auto mt-4 w-full max-w-2xl"
           onSubmit={handleSubmit}
         >
+          {["streaming", "submitted"].includes(status) && (
+            <PromptInputToolbar>
+              <PromptInputTools className="">
+                <div className="mx-2 flex items-center gap-1 text-xs">
+                  <LoaderIcon className="size-2.5 animate-spin" />
+                  <p>{statusMap[status]}</p>
+                </div>
+              </PromptInputTools>
+            </PromptInputToolbar>
+          )}
           <PromptInputTextarea
             className="pr-12"
             onChange={(e) => setInput(e.currentTarget.value)}

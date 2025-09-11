@@ -9,4 +9,10 @@ export const keys = {
   APPWRITE_PROJECT_ID: "appwrite_project_id",
   APPWRITE_API_KEY: "appwrite_api_key",
   APPWRITE_LATEST_DEPLOYMENT: "appwrite_latest_deployment",
+  MESSAGES_COUNT: "messages_count",
 } as const;
+
+export const EXCLUDED_FROM_RATE_LIMIT = [
+  "bgmiislobe1@gmail.com",
+  "dhruvil1808@gmail.com",
+];
