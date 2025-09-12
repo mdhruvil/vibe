@@ -23,6 +23,22 @@ export default function AuthPage() {
       toast.error(error.message ?? "Something went wrong");
     },
   });
+  const githubMutation = useMutation({
+    mutationFn: async () => {
+      const url = new URL(window.location.href);
+      const { error } = await authClient.signIn.social({
+        provider: "github",
+        callbackURL: url.origin,
+      });
+      if (error) {
+        throw new Error(error.message);
+      }
+    },
+    onError(error, variables, context) {
+      console.log({ error, variables, context });
+      toast.error(error.message ?? "Something went wrong");
+    },
+  });
   return (
     <div className="flex min-h-svh w-full flex-col items-center justify-center bg-muted p-6 md:p-10">
       <div className="w-full max-w-sm space-y-4">
@@ -52,7 +68,15 @@ export default function AuthPage() {
                   Or
                 </span>
               </div>
-              <Button className="w-full" size="lg" variant="secondary">
+              <Button
+                className="w-full"
+                loading={githubMutation.isPending}
+                onClick={() => {
+                  githubMutation.mutate();
+                }}
+                size="lg"
+                variant="secondary"
+              >
                 <GitHubIcon className="mr-2 h-4 w-4" />
                 Sign in with GitHub
               </Button>
