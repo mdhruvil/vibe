@@ -2,6 +2,10 @@
 
 Vibe is a vibecoding tool that lets users vibecode apps and deploy directly to their Appwrite account. It provides an AI-powered development environment with integrated chat, code editing, and deployment capabilities.
 
+## Youtube Demo
+
+(soon)
+
 ## Features
 
 - **AI-Powered Development** - Interactive chat interface for coding assistance
