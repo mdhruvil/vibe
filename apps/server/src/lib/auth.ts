@@ -29,7 +29,6 @@ export const auth = betterAuth({
   advanced: {
     crossSubDomainCookies: {
       enabled: true,
-      domain: env.CORS_ORIGIN.replace("https://", "").replace("http://", ""),
     },
     defaultCookieAttributes: {
       sameSite: "Lax",
