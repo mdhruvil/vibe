@@ -25,9 +25,14 @@ export const auth = betterAuth({
   },
   secret: env.BETTER_AUTH_SECRET,
   baseURL: env.BETTER_AUTH_URL,
+
   advanced: {
+    crossSubDomainCookies: {
+      enabled: true,
+      domain: env.CORS_ORIGIN,
+    },
     defaultCookieAttributes: {
-      sameSite: "none",
+      sameSite: "Lax",
       secure: true,
       httpOnly: true,
       partitioned: true,

@@ -5,7 +5,7 @@
   "compatibility_date": "2025-06-15",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
-    "NODE_ENV": "development"
+    // "NODE_ENV": "development"
     // Add public environment variables here
     // Example: "CORS_ORIGIN": "https://your-domain.com"
   },
