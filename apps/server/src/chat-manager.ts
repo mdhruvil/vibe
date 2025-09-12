@@ -161,8 +161,10 @@ export class ChatManager extends DurableObject<Env> {
   private async startDevServer(): Promise<string> {
     const proc = await this.session.startProcess("bun run dev");
     this.attachLogStreamer(proc.id);
+    const hostname =
+      this.env.NODE_ENV === "development" ? "localhost:8787" : "mdhruvil.page";
     const { url } = await this.session.exposePort(5173, {
-      hostname: "localhost:8787",
+      hostname,
     });
     const publicUrl = url.replace("5173-", "");
     await Promise.all([
