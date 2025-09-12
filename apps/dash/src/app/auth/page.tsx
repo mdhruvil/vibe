@@ -9,9 +9,10 @@ import { authClient } from "@/lib/auth-client";
 export default function AuthPage() {
   const googleMutation = useMutation({
     mutationFn: async () => {
+      const url = new URL(window.location.href);
       const { error } = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/api/auth-redirect",
+        callbackURL: url.origin,
       });
       if (error) {
         throw new Error(error.message);
