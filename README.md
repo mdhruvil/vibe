@@ -4,7 +4,7 @@ Vibe is a vibecoding tool that lets users vibecode apps and deploy directly to t
 
 ## Youtube Demo
 
-(soon)
+[https://youtu.be/RY-2LNRveK8](https://youtu.be/RY-2LNRveK8)
 
 ## Features
 
